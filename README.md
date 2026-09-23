@@ -97,7 +97,8 @@ implementation, not a second one that drifts.
 cd mcp && npm install          # needs Node 18+ and a Chrome or Chromium on the machine
 ```
 
-Point a client at it:
+Opening this repo as a project picks the server up from the checked-in `.mcp.json`. To register it
+globally instead, point a client at it by absolute path:
 
 ```json
 {

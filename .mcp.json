@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "stitch-bench": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp/server.js"]
+    }
+  }
+}
