@@ -4,6 +4,7 @@ const suites = [
   ['synthetic exposure + vignette', require('./synthetic.test.js')],
   ['ragged edges', require('./edges.test.js')],
   ['real images', require('./real.test.js')],
+  ['mcp server', require('./mcp.test.js')],
 ];
 (async () => {
   let allPass = true;

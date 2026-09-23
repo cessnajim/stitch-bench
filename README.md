@@ -87,6 +87,43 @@ needs no external images: it builds a scene, cuts overlapping frames, applies kn
 vignette damage, and compares the stitch against the original. Point `STITCH_TEST_DIR` at a folder
 of overlapping photos to run the real-image checks as well.
 
+## MCP server
+
+`mcp/` exposes the stitcher as tools an agent can call, so a pile of frames can be checked, stitched
+and written without anyone opening a browser. It drives the same page in headless Chrome — one
+implementation, not a second one that drifts.
+
+```bash
+cd mcp && npm install          # needs Node 18+ and a Chrome or Chromium on the machine
+```
+
+Point a client at it:
+
+```json
+{
+  "mcpServers": {
+    "stitch-bench": {
+      "command": "node",
+      "args": ["/absolute/path/to/stitch-bench/mcp/server.js"]
+    }
+  }
+}
+```
+
+Set `CHROME_PATH` if the browser is somewhere unusual; macOS Chrome, Chromium and Brave are found
+automatically.
+
+| Tool | What it does |
+| --- | --- |
+| `stitch_panorama` | Aligns overlapping photos, corrects exposure, writes the image, reports what was placed, corrected and painted in |
+| `inspect_alignment` | Dry run — which frames link to which, with match counts, and the size the result would be. Writes nothing |
+| `stitch_layout` | Row, column or grid layout for contact sheets, comparisons and tiles |
+
+Each returns structured output plus a small preview image, and reports progress while it works —
+a full-resolution stitch of two dozen 24MP frames takes minutes, and a silent tool call that long
+looks like a hung one. Paths in, paths out: the server reads only the files it is given and writes
+only where it is told.
+
 ## tools/
 
 Optional helpers for pulling source frames out of a self-hosted [Immich](https://immich.app) DAM
