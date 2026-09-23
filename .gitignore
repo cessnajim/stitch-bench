@@ -1,0 +1,13 @@
+# Test inputs and outputs — never commit photos or renders
+test/fixtures/
+test/out/
+*.NEF
+*.jpg
+*.jpeg
+*.png
+!docs/*.jpg
+node_modules/
+package-lock.json
+*.pem
+session.env
+__pycache__/

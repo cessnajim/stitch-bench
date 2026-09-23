@@ -1,0 +1,8 @@
+{
+  "name": "stitch-bench-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Headless-Chrome regression tests for stitch-bench.html",
+  "scripts": { "test": "node run.js" },
+  "dependencies": { "puppeteer-core": "^23.0.0" }
+}

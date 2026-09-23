@@ -1,0 +1,1657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stitch Bench</title>
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#E9ECEF; --panel:#FFFFFF; --panel-2:#F5F6F8; --ink:#1A1F24; --muted:#5B646E; --line:#D3D8DD;
+  --accent:#B0245F; --accent-ink:#FFFFFF; --accent-soft:#F7E4EC;
+  --ok:#2C7A4B; --warn:#9A5A08; --bad:#B3261E;
+  --check1:#DDE1E5; --check2:#F3F4F6; --shadow:rgba(20,28,36,.14);
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111416; --panel:#1A1E22; --panel-2:#22272C; --ink:#E3E7EA; --muted:#97A0A9; --line:#2D3339;
+    --accent:#E8649D; --accent-ink:#1C0711; --accent-soft:#3A1E2A;
+    --ok:#62C48F; --warn:#E3A652; --bad:#F2766D;
+    --check1:#1D2125; --check2:#272C31; --shadow:rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111416; --panel:#1A1E22; --panel-2:#22272C; --ink:#E3E7EA; --muted:#97A0A9; --line:#2D3339;
+  --accent:#E8649D; --accent-ink:#1C0711; --accent-soft:#3A1E2A;
+  --ok:#62C48F; --warn:#E3A652; --bad:#F2766D;
+  --check1:#1D2125; --check2:#272C31; --shadow:rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.shell{display:grid;grid-template-rows:auto 1fr;height:100%}
+.top{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em;font-size:15px}
+.brand svg{color:var(--accent)}
+.brand small{font-weight:400;color:var(--muted);font-size:13px}
+.top .spacer{flex:1}
+
+.app{display:grid;grid-template-columns:340px minmax(0,1fr);min-height:0}
+.side{order:-1;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:22px}
+.side section{display:flex;flex-direction:column;gap:10px}
+.side h2{margin:0;font-size:11px;font-weight:650;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;gap:8px}
+.side h2 .count{font-family:var(--mono);color:var(--ink);letter-spacing:0}
+.side h2 .grow{flex:1}
+
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 11px;cursor:pointer;line-height:1.2;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--panel-2)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:var(--panel-2)}
+.btn.icon{padding:4px 7px;font-family:var(--mono)}
+.btn.block{justify-content:center;width:100%;padding:9px 12px}
+
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel-2)}
+.drop:hover,.drop.over{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
+.drop strong{color:var(--ink);font-weight:600}
+.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.note.sample{background:var(--accent-soft);color:var(--ink);padding:8px 10px;border-radius:6px}
+
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px;border:1px solid var(--line);border-radius:7px;cursor:pointer;background:var(--panel)}
+.item.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.item img{width:52px;height:40px;object-fit:cover;border-radius:4px;display:block;background:var(--check1)}
+.item .meta{min-width:0}
+.item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:550}
+.item .dims{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.item .acts{display:flex;gap:2px}
+.pill{font-family:system-ui,sans-serif;font-size:10.5px;font-weight:650;letter-spacing:.03em;padding:1px 6px;border-radius:99px;text-transform:uppercase}
+.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.pill.raw{color:var(--muted);background:var(--panel-2);border:1px solid var(--line)}
+.pill.ref{color:var(--accent);background:var(--accent-soft)}
+
+.seg{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{text-align:center;padding:7px 2px;font-size:12.5px;cursor:pointer;border-left:1px solid var(--line);color:var(--muted)}
+.seg label:first-of-type{border-left:0}
+.seg input:checked+label{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg input:focus-visible+label{outline:2px solid var(--accent);outline-offset:-3px}
+
+.field{display:grid;grid-template-columns:118px minmax(0,1fr);align-items:center;gap:10px}
+.field>label{color:var(--muted);font-size:13px}
+.field select,.field input[type=number],.field input[type=text]{width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.field input[type=range]{width:100%;accent-color:var(--accent)}
+.field .inline{display:flex;align-items:center;gap:8px;min-width:0}
+.field .inline output{font-family:var(--mono);font-size:12px;min-width:38px;text-align:right}
+.check{display:flex;align-items:center;gap:8px;font-size:13px}
+.check input{accent-color:var(--accent)}
+input[type=color]{width:34px;height:26px;padding:0 2px;border:1px solid var(--line);border-radius:5px;background:var(--panel)}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.dims-out{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+.stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-width:0;min-height:0}
+.toolbar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.toolbar .zoom{font-family:var(--mono);font-size:12px;min-width:48px;text-align:center}
+.toolbar .sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+.status{flex:1;min-width:160px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:8px;justify-content:flex-end;text-align:right}
+.status.busy::before{content:"";width:10px;height:10px;border-radius:50%;border:2px solid var(--accent);border-right-color:transparent;animation:spin .8s linear infinite;flex:none}
+.status.error{color:var(--bad)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.status.busy::before{animation:none}}
+
+.viewport{overflow:auto;position:relative;background:var(--bg);touch-action:none}
+.viewport.pan{cursor:grab}
+.viewport.panning{cursor:grabbing}
+.canvas-wrap{display:flex;min-width:100%;min-height:100%;width:max-content;padding:28px}
+#view{margin:auto;display:block;flex:none;box-shadow:0 0 0 1px var(--line),0 10px 32px var(--shadow);
+  background-color:var(--check2);background-image:conic-gradient(var(--check1) 25%,transparent 0 50%,var(--check1) 0 75%,transparent 0);background-size:16px 16px;image-rendering:auto}
+#view.free{cursor:move}
+.empty{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+.empty .box{max-width:360px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty h3{margin:0;color:var(--ink);font-size:17px}
+.empty p{margin:0}
+.dropping .viewport{outline:3px dashed var(--accent);outline-offset:-10px}
+
+.report{border-top:1px solid var(--line);background:var(--panel);padding:10px 14px;max-height:34vh;overflow:auto;font-size:13px}
+.report h3{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:650}
+.report table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.report td,.report th{padding:4px 8px 4px 0;text-align:left;vertical-align:top}
+.report th{font-weight:500;color:var(--muted);font-size:12px}
+.report td.num{font-family:var(--mono);font-size:12px}
+.report .warnline{color:var(--warn);margin:6px 0 0}
+.report .errline{color:var(--bad);margin:0}
+
+@media (max-width:760px){
+  html,body{height:auto}
+  .shell{height:auto}
+  .app{grid-template-columns:1fr}
+  .stage{height:68vh;border-bottom:1px solid var(--line)}
+  .side{order:0;border-right:0}
+  .field{grid-template-columns:104px minmax(0,1fr)}
+  .canvas-wrap{padding:16px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 1.5v21M1.5 12h21"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
+      Stitch Bench <small>align · stitch · export</small>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="addTop" type="button">Add images</button>
+  </header>
+
+  <div class="app">
+    <main class="stage" aria-label="Preview">
+      <div class="toolbar">
+        <button class="btn icon" id="zOut" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+        <span class="zoom" id="zLbl">Fit</span>
+        <button class="btn icon" id="zIn" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+        <button class="btn" id="zFit" type="button">Fit</button>
+        <button class="btn" id="z100" type="button">100%</button>
+        <span class="sep"></span>
+        <span class="dims-out" id="outInfo"></span>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </div>
+      <div class="viewport" id="viewport" tabindex="0" aria-label="Stitched result preview">
+        <div class="canvas-wrap"><canvas id="view" width="1" height="1"></canvas></div>
+        <div class="empty" id="empty" hidden>
+          <div class="box">
+            <h3>Drop images to start</h3>
+            <p>Drag files anywhere on this page, paste with ⌘V, or choose them from disk. Nothing leaves your computer.</p>
+            <button class="btn primary" id="addEmpty" type="button">Choose images</button>
+          </div>
+        </div>
+      </div>
+      <div class="report" id="report" hidden></div>
+    </main>
+
+    <aside class="side">
+      <section>
+        <h2>Images <span class="count" id="count">0</span><span class="grow"></span><button class="btn ghost" id="clearAll" type="button">Clear all</button></h2>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="image/*,.nef,.nrw,.cr2,.cr3,.arw,.dng,.raf,.orf,.rw2,.pef,.srw" multiple>
+          <strong>Choose images</strong> or drop them here
+        </label>
+        <p class="note sample" id="sampleNote" hidden>These are example images. Add your own and they’ll replace them.</p>
+        <ul class="list" id="list"></ul>
+        <p class="hint" id="orderHint">Order sets left-to-right / top-to-bottom placement and which image sits on top.</p>
+      </section>
+
+      <section>
+        <h2>Method</h2>
+        <div class="seg" role="radiogroup" aria-label="Stitch method">
+          <input type="radio" name="mode" id="m-pano" value="pano"><label for="m-pano">Panorama</label>
+          <input type="radio" name="mode" id="m-row" value="row"><label for="m-row">Row</label>
+          <input type="radio" name="mode" id="m-col" value="col"><label for="m-col">Column</label>
+          <input type="radio" name="mode" id="m-grid" value="grid"><label for="m-grid">Grid</label>
+          <input type="radio" name="mode" id="m-free" value="free"><label for="m-free">Freeform</label>
+        </div>
+
+        <div data-panel="pano" class="stack" style="display:flex;flex-direction:column;gap:10px">
+          <p class="hint">Finds matching detail where shots overlap and aligns them automatically. Order doesn’t matter; neighbours need roughly 20–50% overlap.</p>
+          <div class="field"><label for="o-model">Alignment</label>
+            <select id="o-model" data-opt="model">
+              <option value="perspective">Perspective — handheld photos</option>
+              <option value="similarity">Rotate + scale — flatbed, drone</option>
+              <option value="translation">Shift only — scans, screenshots, tiles</option>
+            </select></div>
+          <div class="field"><label for="o-features">Feature points</label>
+            <select id="o-features" data-opt="features">
+              <option value="1200">1,200 — fast</option>
+              <option value="2500">2,500 — balanced</option>
+              <option value="5000">5,000 — thorough</option>
+            </select></div>
+          <div class="field"><label for="o-exposure">Exposure</label>
+            <select id="o-exposure" data-opt="exposure">
+              <option value="full">Match, de-vignette, smooth</option>
+              <option value="gain">Match brightness only</option>
+              <option value="off">Leave exactly as captured</option>
+            </select></div>
+          <div class="field" id="paintField"><label for="o-paint">Painted-in limit</label>
+            <div class="inline"><input type="range" id="o-paint" data-opt="paint" min="0" max="30" step="1"><output id="paintOut">8%</output></div></div>
+          <div class="field"><label for="o-blend">Seams</label>
+            <select id="o-blend" data-opt="blend">
+              <option value="feather">Feathered blend</option>
+              <option value="hard">Hard edges (list order on top)</option>
+            </select></div>
+          <div class="field"><label for="o-edges">Ragged edges</label>
+            <select id="o-edges" data-opt="edges">
+              <option value="trim">Trim, then paint in the rest</option>
+              <option value="crop">Crop to the filled area</option>
+              <option value="fill">Keep everything, paint in the gaps</option>
+              <option value="keep">Leave them empty</option>
+            </select></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" id="realign" type="button">Re-run alignment</button>
+            <button class="btn" id="toFree" type="button" hidden>Fine-tune by hand</button>
+          </div>
+        </div>
+
+        <div data-panel="row col" style="display:flex;flex-direction:column;gap:10px">
+          <div class="field"><label for="o-match" id="matchLbl">Match heights</label>
+            <select id="o-match" data-opt="match">
+              <option value="min">Scale to smallest</option>
+              <option value="max">Scale to largest</option>
+              <option value="none">Keep original sizes</option>
+            </select></div>
+          <div class="field" id="alignField"><label for="o-align">Align</label>
+            <select id="o-align" data-opt="align">
+              <option value="start">Top</option>
+              <option value="center">Center</option>
+              <option value="end">Bottom</option>
+            </select></div>
+        </div>
+
+        <div data-panel="grid" style="display:flex;flex-direction:column;gap:10px">
+          <div class="field"><label for="o-cols">Columns</label><input type="number" id="o-cols" data-opt="cols" min="1" max="50" step="1"></div>
+          <div class="field"><label for="o-cellFit">In each cell</label>
+            <select id="o-cellFit" data-opt="cellFit">
+              <option value="none">Original size, centred</option>
+              <option value="contain">Scale to fit</option>
+              <option value="cover">Scale to fill (crops)</option>
+            </select></div>
+          <p class="hint">Cells take the size of the largest image. Same-size tiles line up edge to edge.</p>
+        </div>
+
+        <div data-panel="free" style="display:flex;flex-direction:column;gap:10px">
+          <p class="hint">Drag images in the preview to place them. Arrow keys nudge the selected image 1 px (Shift for 10 px).</p>
+          <label class="check"><input type="checkbox" id="o-onion" data-opt="onion"> See-through selected image while aligning</label>
+          <div class="field"><label>Selected</label><div class="inline dims-out" id="freePos">—</div></div>
+        </div>
+
+        <div data-panel="row col grid" class="field"><label for="o-gap">Gap</label>
+          <div class="inline"><input type="range" id="o-gap" data-opt="gap" min="0" max="200" step="1"><output id="gapOut">0 px</output></div></div>
+        <div class="field"><label for="o-bg">Background</label>
+          <div class="inline"><input type="color" id="o-bg" data-opt="bg" aria-label="Background colour"><label class="check"><input type="checkbox" id="o-transparent" data-opt="transparent"> Transparent</label></div></div>
+      </section>
+
+      <section>
+        <h2>Export</h2>
+        <div class="field"><label for="o-format">Format</label>
+          <select id="o-format" data-opt="format">
+            <option value="image/png">PNG — lossless</option>
+            <option value="image/jpeg">JPEG</option>
+            <option value="image/webp">WebP</option>
+          </select></div>
+        <div class="field" id="qualityField"><label for="o-quality">Quality</label>
+          <div class="inline"><input type="range" id="o-quality" data-opt="quality" min="0.5" max="1" step="0.01"><output id="qOut">92</output></div></div>
+        <div class="field"><label for="o-scale">Size</label>
+          <select id="o-scale" data-opt="scale">
+            <option value="1">100% — full resolution</option>
+            <option value="0.75">75%</option>
+            <option value="0.5">50%</option>
+            <option value="0.25">25%</option>
+          </select></div>
+        <div class="field"><label for="o-name">File name</label><input type="text" id="o-name" data-opt="name" spellcheck="false"></div>
+        <p class="dims-out" id="exportInfo">—</p>
+        <button class="btn primary block" id="download" type="button">Download</button>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+'use strict';
+const CV_URL = 'https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.10.0-release.1/dist/opencv.js';
+const PROXY_MAX = 1600;          // long side of the working copy used for previews + feature detection
+const PREVIEW_MAX_PX = 36e6;     // cap on preview canvas pixels
+const EXPORT_MAX_PX = 180e6;     // cap on exported pixels (browser canvas limits)
+
+const $ = (s, r = document) => r.querySelector(s);
+const tick = () => new Promise(r => setTimeout(r, 0));
+const nf = n => Math.round(n).toLocaleString('en-US');
+let uid = 0;
+
+const S = {
+  items: [], mode: 'pano', sel: null, sample: false, zoom: null,
+  pano: null, panoErr: null, panoBusy: false, view: null,
+  opt: { gap: 0, bg: '#ffffff', transparent: false, match: 'min', align: 'center', cols: 3, cellFit: 'none',
+         model: 'perspective', features: 2500, blend: 'feather', edges: 'trim', paint: 8, onion: true, exposure: 'full',
+         format: 'image/png', quality: 0.92, scale: 1, name: defaultName() }
+};
+
+function defaultName() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return `stitched-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+}
+function setStatus(text, kind = '') {
+  const el = $('#status'); el.textContent = text || ''; el.className = 'status' + (kind ? ' ' + kind : '');
+}
+function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+/* ---------- 3×3 matrix helpers (row-major) ---------- */
+const I3 = () => [1, 0, 0, 0, 1, 0, 0, 0, 1];
+function mul(A, B) {
+  const C = new Array(9);
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++)
+    C[r * 3 + c] = A[r * 3] * B[c] + A[r * 3 + 1] * B[3 + c] + A[r * 3 + 2] * B[6 + c];
+  return norm(C);
+}
+function norm(M) { const s = M[8]; return Math.abs(s) > 1e-12 ? M.map(v => v / s) : M; }
+function inv3(m) {
+  const [a, b, c, d, e, f, g, h, i] = m;
+  const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g;
+  const det = a * A + b * B + c * C;
+  return norm([A / det, -(b * i - c * h) / det, (b * f - c * e) / det,
+               B / det, (a * i - c * g) / det, -(a * f - c * d) / det,
+               C / det, -(a * h - b * g) / det, (a * e - b * d) / det]);
+}
+function apply(M, x, y) { const w = M[6] * x + M[7] * y + M[8]; return [(M[0] * x + M[1] * y + M[2]) / w, (M[3] * x + M[4] * y + M[5]) / w, w]; }
+const T3 = (tx, ty) => [1, 0, tx, 0, 1, ty, 0, 0, 1];
+const S3 = (sx, sy = sx) => [sx, 0, 0, 0, sy, 0, 0, 0, 1];
+
+/* ---------- loading images ---------- */
+function makeItem(name, bmp, blob) {
+  const w = bmp.width, h = bmp.height;
+  const p = Math.min(1, PROXY_MAX / Math.max(w, h));
+  const proxy = mkCanvas(Math.max(1, Math.round(w * p)), Math.max(1, Math.round(h * p)));
+  const pc = proxy.getContext('2d'); pc.imageSmoothingQuality = 'high'; pc.drawImage(bmp, 0, 0, proxy.width, proxy.height);
+  const ts = Math.min(1, 120 / Math.max(w, h));
+  const th = mkCanvas(Math.max(1, Math.round(w * ts)), Math.max(1, Math.round(h * ts)));
+  th.getContext('2d').drawImage(proxy, 0, 0, th.width, th.height);
+  // Keep only the working copy in memory. Full-resolution pixels are decoded from the file when a
+  // render actually needs them and released straight after — 26 × 24MP would be 2.5 GB otherwise.
+  const it = { id: ++uid, name, w, h, blob: blob || null, full: blob ? null : bmp, proxy, p: proxy.width / w,
+               thumb: th.toDataURL('image/jpeg', .8), x: null, y: null, feat: null };
+  if (blob) bmp.close?.();
+  return it;
+}
+
+/* ---------- RAW files: use the camera's embedded JPEG preview ---------- */
+// Browsers can't demosaic RAW data, but NEF/CR2/ARW/DNG/etc. carry a camera-rendered JPEG
+// (usually full resolution). Find the largest decodable one and honour the RAW's orientation tag.
+const RAW_RE = /\.(nef|nrw|cr2|cr3|crw|arw|srf|sr2|dng|raf|orf|rw2|pef|srw|erf|kdc|dcr|3fr|iiq|rwl|mrw|x3f)$/i;
+
+// Walk a JPEG's marker segments from SOI; returns {start,end,w,h} or null if it isn't a baseline/progressive JPEG.
+function jpegAt(d, i) {
+  if (d[i] !== 0xFF || d[i + 1] !== 0xD8 || d[i + 2] !== 0xFF) return null;
+  let p = i + 2, w = 0, h = 0;
+  while (p + 4 <= d.length) {
+    if (d[p] !== 0xFF) return null;
+    const m = d[p + 1];
+    if (m === 0xFF) { p++; continue; }
+    if (m === 0xD9) return null;
+    const len = (d[p + 2] << 8) | d[p + 3];
+    if (len < 2) return null;
+    if ((m >= 0xC0 && m <= 0xCF) && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) {
+      if (m === 0xC3 || m === 0xC7 || m === 0xCB || m === 0xCF) return null; // lossless JPEG = raw sensor data
+      h = (d[p + 5] << 8) | d[p + 6]; w = (d[p + 7] << 8) | d[p + 8];
+    }
+    if (m === 0xDA) {
+      if (!w || !h) return null;
+      for (let q = p + 2 + len; q + 1 < d.length; q++)
+        if (d[q] === 0xFF && d[q + 1] === 0xD9) return { start: i, end: q + 2, w, h };
+      return null;
+    }
+    p += 2 + len;
+  }
+  return null;
+}
+
+// Minimal TIFF reader: collects JPEG offsets from every IFD / SubIFD and the IFD0 orientation.
+function tiffScan(d, base = 0, limit = d.length) {
+  const out = { offsets: [], orientation: 1 };
+  if (limit - base < 8) return out;
+  const le = d[base] === 0x49 && d[base + 1] === 0x49, be = d[base] === 0x4D && d[base + 1] === 0x4D;
+  if (!le && !be) return out;
+  const dv = new DataView(d.buffer, d.byteOffset, d.byteLength);
+  const u16 = o => dv.getUint16(base + o, le), u32 = o => dv.getUint32(base + o, le);
+  const inRange = o => o > 0 && base + o + 2 <= limit;
+  const vals = (e) => {
+    const type = u16(e + 2), count = u32(e + 4), size = type === 3 ? 2 : 4;
+    const at = count * size <= 4 ? e + 8 : u32(e + 8), r = [];
+    for (let k = 0; k < Math.min(count, 64); k++) { const o = at + k * size; if (base + o + size > limit) break; r.push(size === 2 ? u16(o) : u32(o)); }
+    return r;
+  };
+  const seen = new Set();
+  const walk = (o, depth, isIfd0) => {
+    let guard = 0;
+    while (inRange(o) && !seen.has(o) && depth < 4 && guard++ < 16) {
+      seen.add(o);
+      const n = u16(o); if (n > 500 || base + o + 2 + n * 12 > limit) return;
+      const tags = new Map();
+      for (let k = 0; k < n; k++) { const e = o + 2 + k * 12; tags.set(u16(e), e); }
+      const get = t => tags.has(t) ? vals(tags.get(t)) : null;
+      if (isIfd0 && tags.has(0x112)) out.orientation = get(0x112)[0] || 1;
+      const jo = get(0x201), jl = get(0x202);
+      if (jo && jl) out.offsets.push(base + jo[0]);
+      const comp = get(0x103), so = get(0x111);
+      if (comp && (comp[0] === 6 || comp[0] === 7) && so && so.length === 1) out.offsets.push(base + so[0]);
+      for (const sub of get(0x14A) || []) walk(sub, depth + 1, false);
+      const exif = get(0x8769); if (exif) walk(exif[0], depth + 1, false);
+      o = u32(o + 2 + n * 12); isIfd0 = false;
+    }
+  };
+  walk(u32(4), 0, true);
+  return out;
+}
+
+// EXIF orientation inside a JPEG's own APP1 segment (0 if none).
+function jpegOrientation(d, j) {
+  let p = j.start + 2;
+  while (p + 4 < j.end) {
+    const m = d[p + 1], len = (d[p + 2] << 8) | d[p + 3];
+    if (m === 0xDA) break;
+    if (m === 0xE1 && d[p + 4] === 0x45 && d[p + 5] === 0x78 && d[p + 6] === 0x69 && d[p + 7] === 0x66)
+      return tiffScan(d, p + 10, p + 2 + len).orientation;
+    p += 2 + len;
+  }
+  return 0;
+}
+
+async function orientBitmap(bmp, o) {
+  if (!(o >= 2 && o <= 8)) return bmp;
+  const w = bmp.width, h = bmp.height, swap = o >= 5;
+  const c = mkCanvas(swap ? h : w, swap ? w : h), x = c.getContext('2d');
+  const T = { 2: [-1, 0, 0, 1, w, 0], 3: [-1, 0, 0, -1, w, h], 4: [1, 0, 0, -1, 0, h], 5: [0, 1, 1, 0, 0, 0],
+              6: [0, 1, -1, 0, h, 0], 7: [0, -1, -1, 0, h, w], 8: [0, -1, 1, 0, 0, w] }[o];
+  x.setTransform(...T); x.drawImage(bmp, 0, 0); bmp.close?.();
+  return createImageBitmap(c);
+}
+
+async function decodeRawPreview(file) {
+  const d = new Uint8Array(await file.arrayBuffer());
+  const t = tiffScan(d);
+  let cands = t.offsets.map(o => jpegAt(d, o)).filter(Boolean);
+  if (!cands.length) {
+    // Not TIFF-based (RAF, CR3, …) or no tagged preview: scan for embedded JPEG streams.
+    for (let i = 0; i + 3 < d.length; i++) {
+      if (d[i] !== 0xFF || d[i + 1] !== 0xD8 || d[i + 2] !== 0xFF) continue;
+      const j = jpegAt(d, i); if (j) { cands.push(j); i = j.end - 1; }
+    }
+  }
+  cands.sort((a, b) => b.w * b.h - a.w * a.h);
+  for (const j of cands) {
+    try {
+      const blob = new Blob([d.subarray(j.start, j.end)], { type: 'image/jpeg' });
+      const bmp = await createImageBitmap(blob);
+      // Camera previews rarely carry their own orientation; fall back to the RAW's tag.
+      const o = jpegOrientation(d, j) > 1 ? 1 : t.orientation;
+      if (o >= 2 && o <= 8) return { bitmap: await orientBitmap(bmp, o), blob: null };   // rotated: keep it
+      return { bitmap: bmp, blob };
+    } catch { /* try the next preview */ }
+  }
+  return null;
+}
+
+async function addFiles(fileList) {
+  const files = [...fileList].filter(f => f.type.startsWith('image/') || RAW_RE.test(f.name) || /\.(jpe?g|png|webp|gif|bmp|avif|heic|tiff?)$/i.test(f.name));
+  if (!files.length) { setStatus('No images in that selection.', 'error'); return; }
+  if (S.sample) { clearItems(); S.sample = false; }
+  const failed = [], noPreview = [];
+  let raws = 0;
+  for (let i = 0; i < files.length; i++) {
+    setStatus(`Reading ${i + 1} of ${files.length}…`, 'busy'); await tick();
+    const f = files[i];
+    try {
+      if (RAW_RE.test(f.name)) {
+        const bmp = await decodeRawPreview(f);
+        if (!bmp) { noPreview.push(f.name); continue; }
+        const it = makeItem(f.name, bmp.bitmap, bmp.blob); it.raw = true; S.items.push(it); raws++;
+      } else S.items.push(makeItem(f.name, await createImageBitmap(f), f));
+    } catch (e) { console.error(f.name, e); failed.push(f.name); }
+  }
+  placeFreeDefaults();
+  const msgs = [];
+  if (failed.length) msgs.push(`This browser couldn’t decode ${failed.join(', ')}. Convert to JPEG or PNG and try again.`);
+  if (noPreview.length) msgs.push(`${noPreview.join(', ')}: no usable embedded preview in the RAW file. Export it to JPEG or 16-bit TIFF from your RAW editor first.`);
+  if (msgs.length) setStatus(msgs.join(' '), 'error');
+  else setStatus(raws ? `Loaded ${raws} RAW file${raws > 1 ? 's' : ''} from the camera’s built-in JPEG preview.` : '');
+  itemsChanged();
+}
+
+function clearItems() {
+  for (const it of S.items) { it.feat?.des.delete(); releaseFull(it); it.full?.close?.(); }
+  S.items = []; S.sel = null;
+}
+
+function itemsChanged() {
+  invalidatePano();
+  renderList(); schedule(0);
+}
+
+function placeFreeDefaults() {
+  let right = 0;
+  for (const it of S.items) if (it.x != null) right = Math.max(right, it.x + it.w);
+  for (const it of S.items) if (it.x == null) { it.x = right; it.y = 0; right += it.w; }
+}
+
+/* ---------- image list ---------- */
+function renderList() {
+  const ul = $('#list'); ul.innerHTML = '';
+  $('#count').textContent = S.items.length;
+  $('#sampleNote').hidden = !S.sample;
+  $('#empty').hidden = S.items.length > 0;
+  $('#view').hidden = S.items.length === 0;
+  const P = S.mode === 'pano' ? S.pano : null;
+  S.items.forEach((it, i) => {
+    const li = document.createElement('li');
+    li.className = 'item' + (S.sel === it.id ? ' sel' : '');
+    let badge = '';
+    if (P) badge = !P.placed.has(it.id) ? '<span class="pill bad">no match</span>'
+      : P.refId === it.id ? '<span class="pill ref">anchor</span>' : '<span class="pill ok">placed</span>';
+    li.innerHTML = `<img alt="" src="${it.thumb}"><div class="meta"><div class="name" title="${esc(it.name)}">${esc(it.name)}</div>
+      <div class="dims">${nf(it.w)} × ${nf(it.h)} ${it.raw ? `<span class="pill raw" title="Using the camera’s embedded JPEG preview">RAW</span>` : ''}${badge}</div></div>
+      <div class="acts"><button class="btn ghost icon" data-a="up" aria-label="Move ${esc(it.name)} up" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn ghost icon" data-a="down" aria-label="Move ${esc(it.name)} down" ${i === S.items.length - 1 ? 'disabled' : ''}>↓</button><button class="btn ghost icon" data-a="rm" aria-label="Remove ${esc(it.name)}">×</button></div>`;
+    li.addEventListener('click', e => {
+      const a = e.target.closest('button')?.dataset.a;
+      if (a === 'up' || a === 'down') {
+        const j = a === 'up' ? i - 1 : i + 1;[S.items[i], S.items[j]] = [S.items[j], S.items[i]];
+        renderList(); schedule(0); return;
+      }
+      if (a === 'rm') {
+        it.feat?.des.delete(); S.items.splice(i, 1); if (S.sel === it.id) S.sel = null;
+        if (!S.items.length) S.sample = false;
+        itemsChanged(); return;
+      }
+      S.sel = S.sel === it.id ? null : it.id; renderList(); updateFreePos(); if (S.mode === 'free') schedule(0);
+    });
+    ul.appendChild(li);
+  });
+  updateFreePos();
+}
+
+/* ---------- options UI ---------- */
+function bindOptions() {
+  document.querySelectorAll('[data-opt]').forEach(el => {
+    const k = el.dataset.opt, v = S.opt[k];
+    if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v);
+    const ev = (el.type === 'range' || el.type === 'color' || el.type === 'text' || el.type === 'number') ? 'input' : 'change';
+    el.addEventListener(ev, () => {
+      let val = el.type === 'checkbox' ? el.checked : el.value;
+      if (['gap', 'cols', 'features', 'quality', 'scale', 'paint'].includes(k)) val = +val;
+      if (k === 'cols') val = Math.max(1, Math.min(50, Math.round(val) || 1));
+      S.opt[k] = val; onOpt(k);
+    });
+  });
+  document.querySelectorAll('input[name=mode]').forEach(r => {
+    r.checked = r.value === S.mode;
+    r.addEventListener('change', () => { S.mode = r.value; S.zoom = null; modeUI(); renderList(); schedule(0); });
+  });
+  modeUI(); syncLabels();
+}
+function onOpt(k) {
+  syncLabels();
+  if (k === 'model' || k === 'features') { invalidatePano(); renderList(); schedule(0); return; }
+  if (['format', 'quality', 'scale', 'name'].includes(k)) { updateExportInfo(); return; }
+  schedule(k === 'gap' ? 20 : 0);
+}
+function syncLabels() {
+  $('#gapOut').textContent = S.opt.gap + ' px';
+  $('#paintOut').textContent = S.opt.paint + '%';
+  $('#paintField').hidden = S.opt.edges !== 'trim';
+  $('#qOut').textContent = Math.round(S.opt.quality * 100);
+  $('#qualityField').hidden = S.opt.format === 'image/png';
+  $('#o-bg').disabled = S.opt.transparent;
+  $('#alignField').hidden = S.opt.match !== 'none';
+}
+function modeUI() {
+  document.querySelectorAll('[data-panel]').forEach(p => p.hidden = !p.dataset.panel.split(' ').includes(S.mode));
+  const col = S.mode === 'col';
+  $('#matchLbl').textContent = col ? 'Match widths' : 'Match heights';
+  const o = $('#o-align').options; o[0].text = col ? 'Left' : 'Top'; o[2].text = col ? 'Right' : 'Bottom';
+  $('#view').classList.toggle('free', S.mode === 'free');
+  $('#viewport').classList.toggle('pan', S.mode !== 'free');
+  $('#orderHint').textContent = {
+    pano: 'Order doesn’t affect alignment. With hard edges, later images sit on top.',
+    row: 'Order sets left-to-right placement.', col: 'Order sets top-to-bottom placement.',
+    grid: 'Order fills the grid left to right, then down.', free: 'Later images sit on top. Click one to select it.'
+  }[S.mode];
+  renderReport();
+}
+
+/* ---------- layout modes ---------- */
+function layout() {
+  const items = S.items, o = S.opt, g = o.gap, R = [];
+  if (S.mode === 'row' || S.mode === 'col') {
+    const row = S.mode === 'row';
+    const sizes = items.map(it => row ? it.h : it.w);
+    const T = o.match === 'min' ? Math.min(...sizes) : o.match === 'max' ? Math.max(...sizes) : 0;
+    let pos = 0, cross = 0;
+    for (const it of items) {
+      const s = T ? T / (row ? it.h : it.w) : 1, w = it.w * s, h = it.h * s;
+      R.push(row ? { it, x: pos, y: 0, w, h } : { it, x: 0, y: pos, w, h });
+      pos += (row ? w : h) + g; cross = Math.max(cross, row ? h : w);
+    }
+    for (const r of R) {
+      const len = row ? r.h : r.w, off = T ? 0 : o.align === 'start' ? 0 : o.align === 'end' ? cross - len : (cross - len) / 2;
+      if (row) r.y = off; else r.x = off;
+    }
+    return row ? { R, W: pos - g, H: cross } : { R, W: cross, H: pos - g };
+  }
+  if (S.mode === 'grid') {
+    const cols = Math.max(1, Math.min(o.cols, items.length)), rows = Math.ceil(items.length / cols);
+    const cw = Math.max(...items.map(i => i.w)), ch = Math.max(...items.map(i => i.h));
+    items.forEach((it, i) => {
+      const cx = (i % cols) * (cw + g), cy = Math.floor(i / cols) * (ch + g);
+      const s = o.cellFit === 'contain' ? Math.min(cw / it.w, ch / it.h) : o.cellFit === 'cover' ? Math.max(cw / it.w, ch / it.h) : 1;
+      const w = it.w * s, h = it.h * s;
+      R.push({ it, x: cx + (cw - w) / 2, y: cy + (ch - h) / 2, w, h, clip: o.cellFit === 'cover' ? { x: cx, y: cy, w: cw, h: ch } : null });
+    });
+    return { R, W: cols * cw + (cols - 1) * g, H: rows * ch + (rows - 1) * g };
+  }
+  // freeform
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const it of items) { x0 = Math.min(x0, it.x); y0 = Math.min(y0, it.y); x1 = Math.max(x1, it.x + it.w); y1 = Math.max(y1, it.y + it.h); }
+  for (const it of items) R.push({ it, x: it.x - x0, y: it.y - y0, w: it.w, h: it.h });
+  return { R, W: x1 - x0, H: y1 - y0, ox: x0, oy: y0 };
+}
+
+async function getFull(it) {
+  if (it.full) return it.full;
+  it.full = await createImageBitmap(it.blob);
+  return it.full;
+}
+function releaseFull(it) { if (it.blob && it.full) { it.full.close?.(); it.full = null; } }
+async function pickSource(it, scale) {
+  if (scale <= it.p * 1.02) return { img: it.proxy, f: it.p, rel: false };
+  return { img: await getFull(it), f: 1, rel: true };
+}
+
+async function renderLayout(k, preview, L = layout()) {
+  const W = Math.max(1, Math.round(L.W * k)), H = Math.max(1, Math.round(L.H * k));
+  const c = mkCanvas(W, H), ctx = c.getContext('2d');
+  if (!S.opt.transparent) { ctx.fillStyle = S.opt.bg; ctx.fillRect(0, 0, W, H); }
+  ctx.imageSmoothingQuality = 'high';
+  const free = preview && S.mode === 'free';
+  let order = L.R;
+  const selR = free && S.sel ? L.R.find(r => r.it.id === S.sel) : null;
+  if (selR && S.opt.onion) order = [...L.R.filter(r => r !== selR), selR];
+  for (const r of order) {
+    const x0 = Math.round(r.x * k), y0 = Math.round(r.y * k), x1 = Math.round((r.x + r.w) * k), y1 = Math.round((r.y + r.h) * k);
+    const src = await pickSource(r.it, (r.w / r.it.w) * k);
+    ctx.save();
+    if (r.clip) { ctx.beginPath(); ctx.rect(Math.round(r.clip.x * k), Math.round(r.clip.y * k), Math.round(r.clip.w * k), Math.round(r.clip.h * k)); ctx.clip(); }
+    if (r === selR && S.opt.onion) ctx.globalAlpha = .55;
+    ctx.drawImage(src.img, x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+    ctx.restore();
+    if (src.rel) releaseFull(r.it);
+  }
+  if (selR) {
+    const s = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#B0245F';
+    ctx.strokeStyle = s; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    ctx.strokeRect(Math.round(selR.x * k) + 1, Math.round(selR.y * k) + 1, Math.round(selR.w * k) - 2, Math.round(selR.h * k) - 2);
+  }
+  return { canvas: c, W: L.W, H: L.H, k, R: L.R, ox: L.ox || 0, oy: L.oy || 0 };
+}
+
+/* ---------- OpenCV loading ---------- */
+let cvP = null;
+function loadCV() {
+  if (cvP) return cvP;
+  cvP = new Promise((resolve, reject) => {
+    const s = document.createElement('script'); s.src = CV_URL; s.async = true;
+    s.onerror = () => { cvP = null; s.remove(); reject(new Error('Couldn’t download the alignment engine (OpenCV). Check your connection — Row, Column, Grid and Freeform work offline.')); };
+    s.onload = async () => {
+      try {
+        let c = window.cv;
+        if (c instanceof Promise) c = await c;
+        if (!c.Mat) await new Promise(r => {
+          const iv = setInterval(() => { if (c.Mat) { clearInterval(iv); r(); } }, 100);
+          c.onRuntimeInitialized = () => { clearInterval(iv); r(); };
+        });
+        // The module object is a thenable; wrap it so resolving doesn't recurse into its then().
+        window.cv = c; resolve({ cv: c });
+      } catch (e) { cvP = null; reject(e); }
+    };
+    document.head.appendChild(s);
+  });
+  return cvP;
+}
+
+/* ---------- panorama: features, matching, alignment ---------- */
+let alignToken = 0;
+function invalidatePano() { S.pano = null; S.panoErr = null; S.panoBusy = false; alignToken++; }
+
+function detect(cv, it, n) {
+  const ctx = it.proxy.getContext('2d');
+  const rgba = cv.matFromImageData(ctx.getImageData(0, 0, it.proxy.width, it.proxy.height));
+  const gray = new cv.Mat(); cv.cvtColor(rgba, gray, cv.COLOR_RGBA2GRAY); rgba.delete();
+  let orb; try { orb = new cv.ORB(n); } catch { orb = new cv.ORB(); }
+  const kp = new cv.KeyPointVector(), des = new cv.Mat(), mask = new cv.Mat();
+  orb.detectAndCompute(gray, mask, kp, des);
+  const cnt = kp.size(), pts = new Float32Array(cnt * 2);
+  for (let i = 0; i < cnt; i++) { const k = kp.get(i); pts[2 * i] = k.pt.x / it.p; pts[2 * i + 1] = k.pt.y / it.p; }
+  gray.delete(); mask.delete(); kp.delete(); orb.delete();
+  return { pts, des, n: cnt, nf: n };
+}
+
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+// Robust shift-only or rotate+scale fit mapping P -> Q.
+function ransac(P, Q, kind, thr) {
+  const n = P.length / 2, t2 = thr * thr, rnd = rng(1234);
+  const inl = M => { const out = []; for (let i = 0; i < n; i++) { const x = P[2 * i], y = P[2 * i + 1]; const dx = M[0] * x + M[1] * y + M[2] - Q[2 * i], dy = M[3] * x + M[4] * y + M[5] - Q[2 * i + 1]; if (dx * dx + dy * dy < t2) out.push(i); } return out; };
+  const fit = idx => {
+    if (kind === 'translation') { let tx = 0, ty = 0; for (const i of idx) { tx += Q[2 * i] - P[2 * i]; ty += Q[2 * i + 1] - P[2 * i + 1]; } return [1, 0, tx / idx.length, 0, 1, ty / idx.length]; }
+    let px = 0, py = 0, qx = 0, qy = 0; for (const i of idx) { px += P[2 * i]; py += P[2 * i + 1]; qx += Q[2 * i]; qy += Q[2 * i + 1]; }
+    px /= idx.length; py /= idx.length; qx /= idx.length; qy /= idx.length;
+    let na = 0, nb = 0, d = 0;
+    for (const i of idx) { const ax = P[2 * i] - px, ay = P[2 * i + 1] - py, bx = Q[2 * i] - qx, by = Q[2 * i + 1] - qy; na += ax * bx + ay * by; nb += ax * by - ay * bx; d += ax * ax + ay * ay; }
+    const a = na / d, b = nb / d; return [a, -b, qx - (a * px - b * py), b, a, qy - (b * px + a * py)];
+  };
+  let best = null, bestC = 0; const iters = kind === 'translation' ? 300 : 1000;
+  for (let t = 0; t < iters; t++) {
+    let M;
+    const i = rnd() * n | 0;
+    if (kind === 'translation') M = [1, 0, Q[2 * i] - P[2 * i], 0, 1, Q[2 * i + 1] - P[2 * i + 1]];
+    else {
+      const j = rnd() * n | 0; if (i === j) continue;
+      const dpx = P[2 * j] - P[2 * i], dpy = P[2 * j + 1] - P[2 * i + 1], dqx = Q[2 * j] - Q[2 * i], dqy = Q[2 * j + 1] - Q[2 * i + 1];
+      const den = dpx * dpx + dpy * dpy; if (den < 100) continue;
+      const a = (dqx * dpx + dqy * dpy) / den, b = (dqy * dpx - dqx * dpy) / den, s = Math.hypot(a, b);
+      if (s < .25 || s > 4) continue;
+      M = [a, -b, Q[2 * i] - (a * P[2 * i] - b * P[2 * i + 1]), b, a, Q[2 * i + 1] - (b * P[2 * i] + a * P[2 * i + 1])];
+    }
+    let c = 0; for (let m = 0; m < n; m++) { const x = P[2 * m], y = P[2 * m + 1]; const dx = M[0] * x + M[1] * y + M[2] - Q[2 * m], dy = M[3] * x + M[4] * y + M[5] - Q[2 * m + 1]; if (dx * dx + dy * dy < t2) c++; }
+    if (c > bestC) { bestC = c; best = M; }
+  }
+  if (!best || bestC < 3) return null;
+  for (let r = 0; r < 3; r++) { const idx = inl(best); if (idx.length < 3) break; best = fit(idx); }
+  return { H: [...best, 0, 0, 1], inliers: inl(best).length };
+}
+
+function convexQuad(pts) {
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % 4], [cx, cy] = pts[(i + 2) % 4];
+    const z = (bx - ax) * (cy - by) - (by - ay) * (cx - bx);
+    if (Math.abs(z) < 1e-9) return false;
+    if (!sign) sign = Math.sign(z); else if (Math.sign(z) !== sign) return false;
+  }
+  return true;
+}
+
+// Returns transform mapping image b's pixels into image a's pixel space.
+function matchPair(cv, a, b, model) {
+  const fa = a.feat, fb = b.feat, res = { a, b, matches: 0, inliers: 0, ok: false };
+  if (fa.n < 8 || fb.n < 8) return res;
+  const bf = new cv.BFMatcher(cv.NORM_HAMMING, false), mm = new cv.DMatchVectorVector();
+  bf.knnMatch(fb.des, fa.des, mm, 2);
+  const P = [], Q = [];
+  for (let i = 0; i < mm.size(); i++) {
+    const m = mm.get(i);
+    if (m.size() >= 2) {
+      const m0 = m.get(0), m1 = m.get(1);
+      if (m0.distance < 0.75 * m1.distance) {
+        P.push(fb.pts[2 * m0.queryIdx], fb.pts[2 * m0.queryIdx + 1]);
+        Q.push(fa.pts[2 * m0.trainIdx], fa.pts[2 * m0.trainIdx + 1]);
+      }
+    }
+    m.delete?.();
+  }
+  mm.delete(); bf.delete();
+  res.matches = P.length / 2;
+  if (res.matches < 8) return res;
+  const thr = 3 / Math.min(a.p, b.p);
+  let H = null;
+  if (model === 'perspective') {
+    const src = cv.matFromArray(res.matches, 1, cv.CV_32FC2, P), dst = cv.matFromArray(res.matches, 1, cv.CV_32FC2, Q), mask = new cv.Mat();
+    const Hm = cv.findHomography(src, dst, cv.RANSAC, thr, mask);
+    if (!Hm.empty() && Hm.rows === 3) { H = norm(Array.from(Hm.data64F)); res.inliers = cv.countNonZero(mask); }
+    src.delete(); dst.delete(); mask.delete(); Hm.delete();
+  } else {
+    const r = ransac(P, Q, model, thr); if (r) { H = r.H; res.inliers = r.inliers; }
+  }
+  if (!H) return res;
+  const det = H[0] * H[4] - H[1] * H[3];
+  const quad = [[0, 0], [b.w, 0], [b.w, b.h], [0, b.h]].map(([x, y]) => apply(H, x, y));
+  const sane = det > 0.1 && det < 10 && quad.every(q => q[2] > 0) && convexQuad(quad);
+  const minIn = model === 'perspective' ? 20 : 12;
+  res.ok = sane && res.inliers >= minIn && res.inliers / res.matches >= 0.12;
+  res.H = H;
+  return res;
+}
+
+function buildTree(items, edges) {
+  const n = items.length, parent = [...Array(n).keys()];
+  const find = x => parent[x] === x ? x : (parent[x] = find(parent[x]));
+  edges.sort((p, q) => q.inliers - p.inliers);
+  const tree = [];
+  for (const e of edges) { const ra = find(e.i), rb = find(e.j); if (ra !== rb) { parent[ra] = rb; tree.push(e); } }
+  const comps = new Map();
+  for (let i = 0; i < n; i++) { const r = find(i); if (!comps.has(r)) comps.set(r, []); comps.get(r).push(i); }
+  let best = [];
+  for (const c of comps.values()) if (c.length > best.length) best = c;
+  if (best.length < 2) throw new Error('None of the images share enough detail to align. Neighbouring shots need roughly 20–50% overlap — or try another Alignment setting.');
+  const inC = new Set(best), tE = tree.filter(e => inC.has(e.i));
+  const adj = new Map(best.map(i => [i, []]));
+  for (const e of tE) { adj.get(e.i).push({ to: e.j, e }); adj.get(e.j).push({ to: e.i, e }); }
+  const ecc = s => { const d = new Map([[s, 0]]), q = [s]; let m = 0; while (q.length) { const u = q.shift(); for (const { to } of adj.get(u)) if (!d.has(to)) { d.set(to, d.get(u) + 1); m = Math.max(m, d.get(to)); q.push(to); } } return m; };
+  const weight = i => adj.get(i).reduce((s, { e }) => s + e.inliers, 0);
+  let ref = best[0];
+  for (const i of best) { const d = ecc(i) - ecc(ref); if (d < 0 || (d === 0 && weight(i) > weight(ref))) ref = i; }
+  const G = new Map([[ref, I3()]]), q = [ref];
+  while (q.length) {
+    const u = q.shift();
+    for (const { to, e } of adj.get(u)) if (!G.has(to)) { G.set(to, mul(G.get(u), e.i === u ? e.H : inv3(e.H))); q.push(to); }
+  }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, srcArea = 0;
+  for (const i of best) {
+    const it = items[i]; srcArea += it.w * it.h;
+    for (const [x, y] of [[0, 0], [it.w, 0], [it.w, it.h], [0, it.h]]) {
+      const [X, Y, w] = apply(G.get(i), x, y);
+      if (w <= 1e-6) throw new Error('Alignment bent an image past the horizon. Try the “Rotate + scale” setting, or remove the outermost images.');
+      x0 = Math.min(x0, X); y0 = Math.min(y0, Y); x1 = Math.max(x1, X); y1 = Math.max(y1, Y);
+    }
+  }
+  if ((x1 - x0) * (y1 - y0) > 25 * srcArea || x1 - x0 > 120000 || y1 - y0 > 120000)
+    throw new Error('Alignment produced an extreme perspective stretch (common with very wide panoramas). Try “Rotate + scale”, or remove the outermost images.');
+  return {
+    G: new Map(best.map(i => [items[i].id, G.get(i)])), placed: new Set(best.map(i => items[i].id)),
+    refId: items[ref].id, links: tE.map(e => ({ a: items[e.i].name, b: items[e.j].name, matches: e.matches, inliers: e.inliers })),
+    unplaced: items.filter((_, i) => !inC.has(i)).map(it => it.name), bbox: { x0, y0, x1, y1 }, model: S.opt.model
+  };
+}
+
+async function alignPano() {
+  const tok = ++alignToken, items = S.items.slice();
+  S.panoBusy = true; S.panoErr = null; renderReport();
+  try {
+    if (!window.cv?.Mat) setStatus('Loading the alignment engine (≈10 MB, first run only)…', 'busy');
+    const { cv } = await loadCV(); if (tok !== alignToken) return;
+    const n = S.opt.features, model = S.opt.model;
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.feat && it.feat.nf === n) continue;
+      setStatus(`Finding features in image ${i + 1} of ${items.length}…`, 'busy'); await tick();
+      if (tok !== alignToken) return;
+      it.feat?.des.delete(); it.feat = detect(cv, it, n);
+    }
+    const pairs = []; for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) pairs.push([i, j]);
+    const edges = [];
+    for (let p = 0; p < pairs.length; p++) {
+      const [i, j] = pairs[p];
+      setStatus(`Matching pair ${p + 1} of ${pairs.length}…`, 'busy'); await tick();
+      if (tok !== alignToken) return;
+      const r = matchPair(cv, items[i], items[j], model); r.i = i; r.j = j;
+      if (r.ok) edges.push(r);
+    }
+    S.pano = buildTree(items, edges);
+    setStatus('');
+  } catch (e) {
+    if (tok !== alignToken) return;
+    S.panoErr = e.message || String(e); setStatus('Alignment failed — see details below.', 'error');
+  } finally {
+    if (tok === alignToken) { S.panoBusy = false; renderReport(); renderList(); schedule(0); }
+  }
+}
+
+function weightMat(cv, w, h) {
+  const s = Math.min(1, 256 / Math.max(w, h)), ww = Math.max(4, Math.round(w * s)), wh = Math.max(4, Math.round(h * s));
+  const a = new Uint8Array(ww * wh), half = Math.min(ww, wh) / 2;
+  for (let y = 0; y < wh; y++) for (let x = 0; x < ww; x++) {
+    const d = Math.min(x + .5, y + .5, ww - x - .5, wh - y - .5) / half;
+    a[y * ww + x] = 1 + Math.round(Math.min(1, d) * 254);
+  }
+  return cv.matFromArray(wh, ww, cv.CV_8UC1, a);
+}
+
+/* ---------- evening out exposure differences between frames ---------- */
+// Two stages: a global brightness/colour match per image (solved across every overlap at once),
+// then a very low-frequency correction field that absorbs what's left — vignetting, sky gradients,
+// auto-exposure drift. Both are computed on a small version of the panorama, so they cost little.
+
+function solveLinear(A, y, n) {
+  for (let c = 0; c < n; c++) {
+    let piv = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(A[r * n + c]) > Math.abs(A[piv * n + c])) piv = r;
+    if (Math.abs(A[piv * n + c]) < 1e-9) return null;
+    if (piv !== c) { for (let k = 0; k < n; k++) { const t = A[c * n + k]; A[c * n + k] = A[piv * n + k]; A[piv * n + k] = t; } const t = y[c]; y[c] = y[piv]; y[piv] = t; }
+    for (let r = c + 1; r < n; r++) { const f = A[r * n + c] / A[c * n + c]; if (!f) continue; for (let k = c; k < n; k++) A[r * n + k] -= f * A[c * n + k]; y[r] -= f * y[c]; }
+  }
+  const x = new Float64Array(n);
+  for (let r = n - 1; r >= 0; r--) { let sum = y[r]; for (let k = r + 1; k < n; k++) sum -= A[r * n + k] * x[k]; x[r] = sum / A[r * n + r]; }
+  return x.every(Number.isFinite) ? x : null;
+}
+function addRow(ATA, ATy, n, terms, val, w) {
+  const w2 = w * w;
+  for (const [i, ci] of terms) { for (const [j, cj] of terms) ATA[i * n + j] += w2 * ci * cj; ATy[i] += w2 * ci * val; }
+}
+// Separable box blur, repeated for a smooth (near-Gaussian) falloff.
+function boxBlur(a, W, H, ch, r, passes = 2) {
+  const cl = (v, m) => v < 0 ? 0 : v > m ? m : v, d = 2 * r + 1;
+  let src = a;
+  for (let pass = 0; pass < passes; pass++) {
+    const tmp = new Float32Array(a.length), out = new Float32Array(a.length);
+    for (let y = 0; y < H; y++) for (let c = 0; c < ch; c++) {
+      const row = y * W; let sum = 0;
+      for (let x = -r; x <= r; x++) sum += src[(row + cl(x, W - 1)) * ch + c];
+      for (let x = 0; x < W; x++) { tmp[(row + x) * ch + c] = sum / d; sum += src[(row + cl(x + r + 1, W - 1)) * ch + c] - src[(row + cl(x - r, W - 1)) * ch + c]; }
+    }
+    for (let x = 0; x < W; x++) for (let c = 0; c < ch; c++) {
+      let sum = 0;
+      for (let y = -r; y <= r; y++) sum += tmp[(cl(y, H - 1) * W + x) * ch + c];
+      for (let y = 0; y < H; y++) { out[(y * W + x) * ch + c] = sum / d; sum += tmp[(cl(y + r + 1, H - 1) * W + x) * ch + c] - tmp[(cl(y - r, H - 1) * W + x) * ch + c]; }
+    }
+    src = out;
+  }
+  return src;
+}
+
+// Squared distance from the image centre, normalised to 1 at the corners.
+function radiusMat(cv, w, h) {
+  const n = 64, a = new Float32Array(n * n), r2 = (w * w + h * h) / 4;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const dx = (x + .5) / n * w - w / 2, dy = (y + .5) / n * h - h / 2;
+    a[y * n + x] = (dx * dx + dy * dy) / r2;
+  }
+  return cv.matFromArray(n, n, cv.CV_32FC1, a);
+}
+
+// Lens falloff: where two frames overlap, the same scene point sits at different distances from
+// each frame's centre. Solved in log space as one falloff curve for the set (same lens) plus a
+// per-image exposure term, which is what links a frame's dark edge to its own bright middle.
+function solveVignette(L, W, H) {
+  const N = L.length, n = N + 2, out = { k: [[], [], []], c1: [0, 0, 0], c2: [0, 0, 0] };
+  for (let c = 0; c < 3; c++) {
+    const ATA = new Float64Array(n * n), ATy = new Float64Array(n);
+    let rows = 0;
+    for (let q = 0; q < W * H; q += 2) {
+      let a = -1, b = -1;
+      for (let i = 0; i < N; i++) if (L[i].wt[q] > 0) { if (a < 0) a = i; else { b = i; break; } }
+      if (b < 0) continue;
+      const vi = L[a].rgb[q * 3 + c], vj = L[b].rgb[q * 3 + c];
+      if (vi < 15 || vi > 242 || vj < 15 || vj > 242) continue;   // skip clipped pixels
+      const ui = L[a].u[q], uj = L[b].u[q];
+      addRow(ATA, ATy, n, [[a, 1], [b, -1], [N, ui - uj], [N + 1, ui * ui - uj * uj]], Math.log(vi) - Math.log(vj), 1);
+      rows++;
+    }
+    if (rows < 200) { for (let i = 0; i < N; i++) out.k[c][i] = 0; continue; }
+    const w = Math.sqrt(rows) / 3;
+    for (let i = 0; i < N; i++) addRow(ATA, ATy, n, [[i, 1]], 0, w * 0.18);
+    addRow(ATA, ATy, n, [[N, 1]], 0, w * 0.08); addRow(ATA, ATy, n, [[N + 1, 1]], 0, w * 0.08);
+    const x = solveLinear(ATA, ATy, n);
+    for (let i = 0; i < N; i++) out.k[c][i] = x ? x[i] : 0;
+    out.c1[c] = x ? x[N] : 0; out.c2[c] = x ? x[N + 1] : 0;
+  }
+  return out;
+}
+const VL = 1024, VU = 2.5, VS = (VL - 1) / VU;
+const vigGainUnused = (v, c, u) => Math.max(0.5, Math.min(1.9, Math.exp(-(v.k[c][v._i] + v.c1[c] * u + v.c2[c] * u * u))));
+
+function buildPhotometric(cv, mode) {
+  const P = S.pano, bb = P.bbox, items = S.items.filter(it => P.placed.has(it.id)), N = items.length;
+  const kl = Math.min(0.5, 700 / Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0));
+  const W = Math.max(8, Math.round((bb.x1 - bb.x0) * kl)), H = Math.max(8, Math.round((bb.y1 - bb.y0) * kl));
+  const base = [kl, 0, -bb.x0 * kl, 0, kl, -bb.y0 * kl, 0, 0, 1], L = [];
+  for (const it of items) {
+    const M = mul(mul(base, P.G.get(it.id)), S3(1 / it.p));
+    const src = cv.matFromImageData(it.proxy.getContext('2d').getImageData(0, 0, it.proxy.width, it.proxy.height));
+    const dst = new cv.Mat(), M1 = cv.matFromArray(3, 3, cv.CV_64F, M);
+    cv.warpPerspective(src, dst, M1, new cv.Size(W, H), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0, 0, 0, 0));
+    const wm = weightMat(cv, it.proxy.width, it.proxy.height), wd = new cv.Mat();
+    const M2 = cv.matFromArray(3, 3, cv.CV_64F, mul(M, S3(it.proxy.width / wm.cols, it.proxy.height / wm.rows)));
+    cv.warpPerspective(wm, wd, M2, new cv.Size(W, H), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0));
+    const rm = radiusMat(cv, it.proxy.width, it.proxy.height), rd = new cv.Mat();
+    const M3 = cv.matFromArray(3, 3, cv.CV_64F, mul(M, S3(it.proxy.width / rm.cols, it.proxy.height / rm.rows)));
+    cv.warpPerspective(rm, rd, M3, new cv.Size(W, H), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0));
+    const rdata = rd.data32F, u = new Float32Array(W * H);
+    const d = dst.data, w8 = wd.data, rgb = new Float32Array(W * H * 3), wt = new Float32Array(W * H);
+    for (let q = 0; q < W * H; q++) {
+      const a = d[q * 4 + 3]; if (a < 250) continue;            // ignore the soft warp edge
+      const inv = 255 / a;
+      rgb[q * 3] = d[q * 4] * inv; rgb[q * 3 + 1] = d[q * 4 + 1] * inv; rgb[q * 3 + 2] = d[q * 4 + 2] * inv;
+      wt[q] = Math.max(1e-3, w8[q] * a / 255); u[q] = rdata[q];
+    }
+    src.delete(); dst.delete(); M1.delete(); M2.delete(); M3.delete(); wm.delete(); wd.delete(); rm.delete(); rd.delete();
+    L.push({ it, rgb, wt, u });
+  }
+  // The pair constraints below only fix images *relative* to each other: scaling every gain and
+  // offset together satisfies them equally well, so the solution can drift (usually darker). Keep
+  // the untouched statistics here and rescale at the end so the set as a whole is left alone.
+  // Sample the frame centres, not the whole frame: the middle of a frame is the part the lens
+  // did not darken, so anchoring there means removing falloff restores light to the corners
+  // instead of pulling the whole panorama down to match them.
+  const anchorStats = (uMax) => {
+    let n = 0, s = 0, q = 0;
+    for (const l of L) for (let i = 0; i < W * H; i++) {
+      if (!l.wt[i] || l.u[i] > uMax) continue;
+      const v = (l.rgb[i * 3] + l.rgb[i * 3 + 1] + l.rgb[i * 3 + 2]) / 3;
+      n++; s += v; q += v * v;
+    }
+    return { n, s, q };
+  };
+  let anchorU = 0.25, a0 = anchorStats(anchorU);
+  if (a0.n < 500) { anchorU = 1e9; a0 = anchorStats(anchorU); }   // tiny overlaps: use everything
+  let n0 = a0.n, s0 = a0.s, q0 = a0.q;
+  // stage 1 — pairwise overlap statistics
+  const stats = new Map(), cov = new Int32Array(N);
+  for (let q = 0; q < W * H; q++) {
+    let m = 0; for (let i = 0; i < N; i++) if (L[i].wt[q] > 0) cov[m++] = i;
+    if (m < 2) continue;
+    for (let a = 0; a < m; a++) for (let b = a + 1; b < m; b++) {
+      const i = cov[a], j = cov[b], key = i * N + j;
+      let st = stats.get(key);
+      if (!st) { st = { n: 0, si: new Float64Array(3), sj: new Float64Array(3), si2: new Float64Array(3), sj2: new Float64Array(3) }; stats.set(key, st); }
+      st.n++;
+      for (let c = 0; c < 3; c++) {
+        const vi = L[i].rgb[q * 3 + c], vj = L[j].rgb[q * 3 + c];
+        st.si[c] += vi; st.sj[c] += vj; st.si2[c] += vi * vi; st.sj2[c] += vj * vj;
+      }
+    }
+  }
+  // per channel: solve for gain + offset per image, with a prior keeping them near "no change"
+  const gains = [[], [], []], offs = [[], [], []];
+  for (let c = 0; c < 3; c++) {
+    const n2 = 2 * N, ATA = new Float64Array(n2 * n2), ATy = new Float64Array(n2);
+    for (const [key, st] of stats) {
+      if (st.n < 40) continue;
+      const i = Math.floor(key / N), j = key % N;
+      const mi = st.si[c] / st.n, mj = st.sj[c] / st.n;
+      const sdi = Math.sqrt(Math.max(1, st.si2[c] / st.n - mi * mi)), sdj = Math.sqrt(Math.max(1, st.sj2[c] / st.n - mj * mj));
+      const w = Math.sqrt(st.n) / 6;
+      addRow(ATA, ATy, n2, [[2 * i, mi], [2 * i + 1, 1], [2 * j, -mj], [2 * j + 1, -1]], 0, w);
+      addRow(ATA, ATy, n2, [[2 * i, sdi], [2 * j, -sdj]], 0, w * 0.4);
+    }
+    for (let i = 0; i < N; i++) { addRow(ATA, ATy, n2, [[2 * i, 1]], 1, 1 / 0.12); addRow(ATA, ATy, n2, [[2 * i + 1, 1]], 0, 1 / 8); }
+    const x = solveLinear(ATA, ATy, n2);
+    for (let i = 0; i < N; i++) {
+      gains[c][i] = x ? Math.min(1.8, Math.max(0.55, x[2 * i])) : 1;
+      offs[c][i] = x ? Math.min(60, Math.max(-60, x[2 * i + 1])) : 0;
+    }
+  }
+  for (let i = 0; i < N; i++) for (let q = 0; q < W * H; q++) {
+    if (!L[i].wt[q]) continue;
+    for (let c = 0; c < 3; c++) L[i].rgb[q * 3 + c] = gains[c][i] * L[i].rgb[q * 3 + c] + offs[c][i];
+  }
+  // stage 2 — lens falloff: one curve for the set plus a per-image exposure term
+  let vig = null;
+  if (mode === 'full' && N > 1) {
+    vig = solveVignette(L, W, H);
+    for (let i = 0; i < N; i++) for (let q = 0; q < W * H; q++) {
+      if (!L[i].wt[q]) continue;
+      const u = L[i].u[q];
+      for (let c = 0; c < 3; c++) L[i].rgb[q * 3 + c] *= Math.max(0.5, Math.min(1.9, Math.exp(-(vig.k[c][i] + vig.c1[c] * u + vig.c2[c] * u * u))));
+    }
+  }
+  // undo the drift: one global affine that puts the set's mean and spread back where they started
+  let alpha = 1, beta = 0;
+  if (n0 > 100) {
+    const a1 = anchorStats(anchorU);
+    const n1 = a1.n, s1 = a1.s, q1 = a1.q;
+    const m0 = s0 / n0, sd0 = Math.sqrt(Math.max(1, q0 / n0 - m0 * m0));
+    const m1 = s1 / n1, sd1 = Math.sqrt(Math.max(1, q1 / n1 - m1 * m1));
+    alpha = Math.max(0.75, Math.min(1.35, sd0 / sd1));
+    beta = Math.max(-40, Math.min(40, m0 - alpha * m1));
+    for (const l of L) for (let q = 0; q < W * H; q++) {
+      if (!l.wt[q]) continue;
+      for (let c = 0; c < 3; c++) l.rgb[q * 3 + c] = alpha * l.rgb[q * 3 + c] + beta;
+    }
+  }
+  // stage 3 — low-frequency correction: pull each frame gently toward the local blend
+  const corr = new Map(), summary = [];
+  let fields = null;
+  if (mode === 'full') {
+    const R = new Float32Array(W * H * 3), WS = new Float32Array(W * H);
+    for (const l of L) for (let q = 0; q < W * H; q++) { const w = l.wt[q]; if (!w) continue; WS[q] += w; for (let c = 0; c < 3; c++) R[q * 3 + c] += w * l.rgb[q * 3 + c]; }
+    for (let q = 0; q < W * H; q++) if (WS[q]) for (let c = 0; c < 3; c++) R[q * 3 + c] /= WS[q];
+    fields = new Map();
+    const r = Math.max(4, Math.round(Math.max(W, H) / 8));
+    for (const l of L) {
+      const D = new Float32Array(W * H * 3), M = new Float32Array(W * H);
+      for (let q = 0; q < W * H; q++) {
+        if (!l.wt[q] || !WS[q]) continue;
+        M[q] = 1; for (let c = 0; c < 3; c++) D[q * 3 + c] = R[q * 3 + c] - l.rgb[q * 3 + c];
+      }
+      const Db = boxBlur(D, W, H, 3, r), Mb = boxBlur(M, W, H, 1, r), F = new Float32Array(W * H * 3);
+      for (let q = 0; q < W * H; q++) {
+        const m = Mb[q];
+        if (m > 1e-4) for (let c = 0; c < 3; c++) F[q * 3 + c] = Math.max(-45, Math.min(45, Db[q * 3 + c] / m));
+      }
+      fields.set(l.it.id, F);
+    }
+  }
+  items.forEach((it, i) => {
+    const g = [gains[0][i], gains[1][i], gains[2][i]], b = [offs[0][i], offs[1][i], offs[2][i]];
+    corr.set(it.id, { g, b, field: fields?.get(it.id) || null,
+      vig: vig ? { k: [vig.k[0][i], vig.k[1][i], vig.k[2][i]], c1: vig.c1, c2: vig.c2 } : null });
+    const vg = vig ? Math.exp(-(vig.k[0][i] + vig.k[1][i] + vig.k[2][i]) / 3) : 1;
+    const mid = (alpha * (g.reduce((s, v) => s + v, 0) / 3 * 128 + b.reduce((s, v) => s + v, 0) / 3) * vg + beta) / 128 - 1;
+    summary.push({ name: it.name, pct: mid * 100 });
+  });
+  const falloff = vig ? (1 - Math.exp(vig.c1.reduce((s, v) => s + v, 0) / 3 + vig.c2.reduce((s, v) => s + v, 0) / 3)) * 100 : 0;
+  return { corr, W, H, kl, summary, mode, falloff, alpha, beta };
+}
+
+function panoSize() { const b = S.pano.bbox; return { W: b.x1 - b.x0, H: b.y1 - b.y0 }; }
+
+async function renderPano(k, preview, onProgress) {
+  const cv = window.cv, P = S.pano, b = P.bbox, feather = S.opt.blend === 'feather';
+  if (S.opt.exposure !== 'off' && P.photoMode !== S.opt.exposure) {
+    setStatus('Matching exposure across the overlaps…', 'busy'); await tick();
+    P.photo = buildPhotometric(cv, S.opt.exposure); P.photoMode = S.opt.exposure; renderReport();
+  }
+  const photo = S.opt.exposure === 'off' ? null : P.photo;
+  const W = Math.max(1, Math.round((b.x1 - b.x0) * k)), H = Math.max(1, Math.round((b.y1 - b.y0) * k));
+  const acc = new Uint8ClampedArray(W * H * 4), wacc = new Uint16Array(W * H);
+  const base = [k, 0, -b.x0 * k, 0, k, -b.y0 * k, 0, 0, 1];
+  const placed = S.items.filter(it => P.placed.has(it.id));
+  for (let n = 0; n < placed.length; n++) {
+    const it = placed[n], G = P.G.get(it.id);
+    onProgress?.(n, placed.length); await tick();
+    const localScale = k * Math.sqrt(Math.abs(G[0] * G[4] - G[1] * G[3]));
+    const { img, f, rel } = await pickSource(it, localScale);
+    const sw = img.width, sh = img.height;
+    const Ms = mul(mul(base, G), S3(1 / f));
+    let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
+    for (const [x, y] of [[0, 0], [sw, 0], [sw, sh], [0, sh]]) { const [X, Y] = apply(Ms, x, y); bx0 = Math.min(bx0, X); by0 = Math.min(by0, Y); bx1 = Math.max(bx1, X); by1 = Math.max(by1, Y); }
+    bx0 = Math.max(0, Math.floor(bx0)); by0 = Math.max(0, Math.floor(by0)); bx1 = Math.min(W, Math.ceil(bx1)); by1 = Math.min(H, Math.ceil(by1));
+    const bw = bx1 - bx0, bh = by1 - by0; if (bw <= 0 || bh <= 0) continue;
+    const Ml = mul(T3(-bx0, -by0), Ms);
+    let cnv = img;
+    if (!(img instanceof HTMLCanvasElement)) { cnv = mkCanvas(sw, sh); cnv.getContext('2d').drawImage(img, 0, 0); }
+    const src = cv.matFromImageData(cnv.getContext('2d').getImageData(0, 0, sw, sh)); cnv = null;
+    const dst = new cv.Mat(), M1 = cv.matFromArray(3, 3, cv.CV_64F, Ml);
+    cv.warpPerspective(src, dst, M1, new cv.Size(bw, bh), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0, 0, 0, 0));
+    src.delete(); M1.delete();
+    const wm = weightMat(cv, sw, sh), wdst = new cv.Mat(), M2 = cv.matFromArray(3, 3, cv.CV_64F, mul(Ml, S3(sw / wm.cols, sh / wm.rows)));
+    cv.warpPerspective(wm, wdst, M2, new cv.Size(bw, bh), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0));
+    wm.delete(); M2.delete();
+    const d = dst.data, wd = wdst.data;
+    const cr = photo?.corr.get(it.id) || null, fld = cr?.field || null;
+    const lut = cr ? [0, 1, 2].map(c => { const t = new Float32Array(256); for (let v = 0; v < 256; v++) t[v] = cr.g[c] * v + cr.b[c]; return t; }) : null;
+    const fs = photo ? photo.kl / k : 0, fW = photo?.W || 0, fH = photo?.H || 0;
+    const ga = photo ? photo.alpha : 1, gb = photo ? photo.beta : 0, doG = photo && (ga !== 1 || gb !== 0);
+    let vmap = null, vMat = null, vlut = null;
+    if (cr?.vig) {
+      const rm = radiusMat(cv, sw, sh), vd = new cv.Mat();
+      const M3 = cv.matFromArray(3, 3, cv.CV_64F, mul(Ml, S3(sw / rm.cols, sh / rm.rows)));
+      cv.warpPerspective(rm, vd, M3, new cv.Size(bw, bh), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0));
+      rm.delete(); M3.delete(); vMat = vd; vmap = vd.data32F;
+      // exp() per pixel is far too slow at full size — precompute the curve over u instead
+      vlut = [0, 1, 2].map(c => {
+        const t = new Float32Array(VL);
+        for (let i = 0; i < VL; i++) { const u = i * VU / (VL - 1); t[i] = Math.max(0.5, Math.min(1.9, Math.exp(-(cr.vig.k[c] + cr.vig.c1[c] * u + cr.vig.c2[c] * u * u)))); }
+        return t;
+      });
+    }
+    const px = new Float32Array(3);
+    for (let y = 0; y < bh; y++) {
+      let o = (by0 + y) * W + bx0, s = y * bw;
+      // bilinear row setup for the low-frequency correction field
+      let fy0 = 0, fy1 = 0, ty = 0;
+      if (fld) { const fy = (by0 + y) * fs; fy0 = Math.max(0, Math.min(fH - 1, Math.floor(fy))); fy1 = Math.min(fH - 1, fy0 + 1); ty = Math.max(0, Math.min(1, fy - fy0)); }
+      for (let x = 0; x < bw; x++, o++, s++) {
+        const a = d[s * 4 + 3]; if (!a) continue;
+        const q = o * 4, sp = s * 4, inv = 255 / a;
+        px[0] = d[sp] * inv; px[1] = d[sp + 1] * inv; px[2] = d[sp + 2] * inv;
+        if (lut) for (let c = 0; c < 3; c++) { const v = px[c]; px[c] = lut[c][v < 0 ? 0 : v > 255 ? 255 : v | 0]; }
+        if (vlut) {
+          let ui = vmap[s] * VS | 0; if (ui < 0) ui = 0; else if (ui >= VL) ui = VL - 1;
+          px[0] *= vlut[0][ui]; px[1] *= vlut[1][ui]; px[2] *= vlut[2][ui];
+        }
+        if (fld) {
+          const fx = (bx0 + x) * fs, fx0 = Math.max(0, Math.min(fW - 1, Math.floor(fx))), fx1 = Math.min(fW - 1, fx0 + 1), tx = Math.max(0, Math.min(1, fx - fx0));
+          const i00 = (fy0 * fW + fx0) * 3, i01 = (fy0 * fW + fx1) * 3, i10 = (fy1 * fW + fx0) * 3, i11 = (fy1 * fW + fx1) * 3;
+          for (let c = 0; c < 3; c++) {
+            const top = fld[i00 + c] + (fld[i01 + c] - fld[i00 + c]) * tx, bot = fld[i10 + c] + (fld[i11 + c] - fld[i10 + c]) * tx;
+            px[c] += top + (bot - top) * ty;
+          }
+        }
+        if (doG) { px[0] = ga * px[0] + gb; px[1] = ga * px[1] + gb; px[2] = ga * px[2] + gb; }
+        if (feather) {
+          const w = wd[s] * a / 255; if (w <= 0) continue;
+          const tw = Math.min(65535, wacc[o] + w), t = w / tw;
+          acc[q] += (px[0] - acc[q]) * t; acc[q + 1] += (px[1] - acc[q + 1]) * t; acc[q + 2] += (px[2] - acc[q + 2]) * t;
+          acc[q + 3] = 255; wacc[o] = tw;
+        } else if (a >= 128) {
+          acc[q] = px[0]; acc[q + 1] = px[1]; acc[q + 2] = px[2]; acc[q + 3] = 255; wacc[o] = 1;
+        }
+      }
+    }
+    dst.delete(); wdst.delete(); vMat?.delete();
+    if (rel) releaseFull(it);
+  }
+  // ragged edges: crop them off, paint them in, or leave them
+  let cx = 0, cy = 0, cw = W, ch = H, cropNote = '', painted = 0;
+  if (S.opt.edges === 'fill' || S.opt.edges === 'trim') {
+    let rect = null;
+    if (S.opt.edges === 'trim') {
+      rect = rectForAllowance(wacc, W, H, S.opt.paint);
+      if (rect) ({ x: cx, y: cy, w: cw, h: ch } = rect);
+    }
+    setStatus('Painting in the missing edges…', 'busy'); await tick();
+    const all = fillGaps(acc, wacc, W, H);
+    if (rect) {                                   // report the share of the kept rectangle only
+      let holes = 0;
+      for (let y = cy; y < cy + ch; y++) for (let x = cx; x < cx + cw; x++) if (!wacc[y * W + x]) holes++;
+      painted = holes / (cw * ch) * 100;
+    } else painted = all;
+  } else if (S.opt.edges === 'crop') {
+    const r = cropRect(wacc, W, H);
+    if (r) ({ x: cx, y: cy, w: cw, h: ch } = r); else cropNote = 'Crop skipped — the filled area is too irregular.';
+  }
+  if (!S.opt.transparent && S.opt.edges !== 'fill' && S.opt.edges !== 'trim') {
+    const hex = S.opt.bg, br = parseInt(hex.slice(1, 3), 16), bgc = parseInt(hex.slice(3, 5), 16), bb = parseInt(hex.slice(5, 7), 16);
+    for (let o = 0; o < W * H; o++) if (!wacc[o]) { const q = o * 4; acc[q] = br; acc[q + 1] = bgc; acc[q + 2] = bb; acc[q + 3] = 255; }
+  }
+  const out = mkCanvas(cw, ch);
+  out.getContext('2d').putImageData(new ImageData(acc, W, H), -cx, -cy);
+  return { canvas: out, W: cw / k, H: ch / k, k, cropNote, painted };
+}
+
+// Paint into the ragged edges a panorama leaves behind. A pyramid push-pull fill: colours are
+// averaged down into coarser levels, then holes are filled from the level above, so what lands in
+// an empty corner is an interpolation of the real pixels around it. Flat sky and water come out
+// convincingly; fine texture (foliage, buildings) comes out soft, which is the honest limit here.
+function fillGaps(acc, wacc, W, H) {
+  let holes = 0;
+  for (let i = 0; i < W * H; i++) if (!wacc[i]) holes++;
+  if (!holes || holes === W * H) return 0;
+  const ks = Math.min(1, 640 / Math.max(W, H));
+  const lw = Math.max(4, Math.round(W * ks)), lh = Math.max(4, Math.round(H * ks));
+  // average the composite down to the working size
+  const lev = [{ c: new Float32Array(lw * lh * 3), w: new Float32Array(lw * lh), lw, lh }];
+  const L0 = lev[0];
+  for (let y = 0; y < H; y++) {
+    const ly = Math.min(lh - 1, (y * ks) | 0);
+    for (let x = 0; x < W; x++) {
+      const o = y * W + x; if (!wacc[o]) continue;
+      const i = ly * lw + Math.min(lw - 1, (x * ks) | 0), q = o * 4;
+      L0.c[i * 3] += acc[q]; L0.c[i * 3 + 1] += acc[q + 1]; L0.c[i * 3 + 2] += acc[q + 2]; L0.w[i]++;
+    }
+  }
+  for (let i = 0; i < lw * lh; i++) if (L0.w[i]) for (let c = 0; c < 3; c++) L0.c[i * 3 + c] /= L0.w[i];
+  // Cells that touch a hole and don't match their surroundings are structure poking into the edge
+  // of the frame — a lamp post, a cable, a treetop. Let them be filled too instead of seeding the
+  // fill, or they smear across everything we invent.
+  {
+    const seed = Uint8Array.from(L0.w, v => v > 0 ? 1 : 0), drop = [];
+    for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
+      const i = y * lw + x; if (!seed[i]) continue;
+      let nearHole = false;
+      for (let dy = -2; dy <= 2 && !nearHole; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const yy = y + dy, xx = x + dx; if (yy < 0 || xx < 0 || yy >= lh || xx >= lw) continue;
+        if (!seed[yy * lw + xx]) { nearHole = true; break; }
+      }
+      if (!nearHole) continue;
+      const near = [];
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+        const yy = y + dy, xx = x + dx; if (yy < 0 || xx < 0 || yy >= lh || xx >= lw) continue;
+        const j = yy * lw + xx; if (seed[j]) near.push((L0.c[j * 3] + L0.c[j * 3 + 1] + L0.c[j * 3 + 2]) / 3);
+      }
+      if (near.length < 8) continue;
+      near.sort((a, b) => a - b);
+      const med = near[near.length >> 1], v = (L0.c[i * 3] + L0.c[i * 3 + 1] + L0.c[i * 3 + 2]) / 3;
+      if (Math.abs(v - med) > 10) drop.push(i);
+    }
+    for (const i of drop) L0.w[i] = 0;
+  }
+  // push: build the pyramid
+  while (lev[lev.length - 1].lw > 2 && lev[lev.length - 1].lh > 2) {
+    const f = lev[lev.length - 1], nw = Math.ceil(f.lw / 2), nh = Math.ceil(f.lh / 2);
+    const c = new Float32Array(nw * nh * 3), w = new Float32Array(nw * nh);
+    for (let y = 0; y < f.lh; y++) for (let x = 0; x < f.lw; x++) {
+      const s = f.w[y * f.lw + x]; if (!s) continue;
+      const i = (y >> 1) * nw + (x >> 1), j = (y * f.lw + x) * 3;
+      w[i] += 1; c[i * 3] += f.c[j]; c[i * 3 + 1] += f.c[j + 1]; c[i * 3 + 2] += f.c[j + 2];
+    }
+    for (let i = 0; i < nw * nh; i++) if (w[i]) for (let k = 0; k < 3; k++) c[i * 3 + k] /= w[i];
+    // Soften every level before it feeds the fill. Without this, anything sitting at the edge of
+    // the coverage — a lamp post, a cable, a treetop — streaks off into the invented area. Only
+    // broad tone should survive into pixels we are inventing.
+    for (let pass = 0; pass < (lev.length >= 2 ? 2 : 1); pass++) {
+      const sm = new Float32Array(c.length);
+      for (let y = 0; y < nh; y++) for (let x = 0; x < nw; x++) {
+        const i = y * nw + x; if (!w[i]) continue;
+        let n = 0, a = 0, b = 0, d = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const yy = y + dy, xx = x + dx; if (yy < 0 || xx < 0 || yy >= nh || xx >= nw) continue;
+          const j = yy * nw + xx; if (!w[j]) continue;
+          n++; a += c[j * 3]; b += c[j * 3 + 1]; d += c[j * 3 + 2];
+        }
+        sm[i * 3] = a / n; sm[i * 3 + 1] = b / n; sm[i * 3 + 2] = d / n;
+      }
+      c.set(sm);
+    }
+    lev.push({ c, w, lw: nw, lh: nh });
+  }
+  // pull: fill each level's holes from the coarser one, so the fill is smooth all the way down
+  for (let l = Math.min(lev.length - 2, lev.length - 2); l >= 0; l--) {
+    const f = lev[l], g = lev[l + 1];
+    for (let y = 0; y < f.lh; y++) for (let x = 0; x < f.lw; x++) {
+      const i = y * f.lw + x; if (f.w[i]) continue;
+      const gx = Math.min(g.lw - 1, x / 2), gy = Math.min(g.lh - 1, y / 2);
+      const x0 = Math.floor(gx), y0 = Math.floor(gy), x1 = Math.min(g.lw - 1, x0 + 1), y1 = Math.min(g.lh - 1, y0 + 1);
+      const tx = gx - x0, ty = gy - y0;
+      let sw = 0, sc = [0, 0, 0];
+      for (const [px, py, wt] of [[x0, y0, (1 - tx) * (1 - ty)], [x1, y0, tx * (1 - ty)], [x0, y1, (1 - tx) * ty], [x1, y1, tx * ty]]) {
+        const j = py * g.lw + px; if (!g.w[j] || wt <= 0) continue;
+        sw += wt; for (let c = 0; c < 3; c++) sc[c] += g.c[j * 3 + c] * wt;
+      }
+      if (!sw) continue;
+      for (let c = 0; c < 3; c++) f.c[i * 3 + c] = sc[c] / sw;
+      f.w[i] = 1;
+    }
+  }
+  // relax what we invented toward a smooth surface that meets the real pixels at the boundary
+  {
+    const known = Uint8Array.from(L0.w, v => v > 0 ? 1 : 0), c = L0.c, tmp = new Float32Array(c.length);
+    for (let it = 0; it < 80; it++) {
+      tmp.set(c);
+      for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
+        const i = y * lw + x; if (known[i]) continue;
+        let n = 0, a = 0, b = 0, d = 0;
+        for (const [yy, xx] of [[y - 1, x], [y + 1, x], [y, x - 1], [y, x + 1]]) {
+          if (yy < 0 || xx < 0 || yy >= lh || xx >= lw) continue;
+          const j = yy * lw + xx; n++; a += tmp[j * 3]; b += tmp[j * 3 + 1]; d += tmp[j * 3 + 2];
+        }
+        if (!n) continue;
+        c[i * 3] = a / n; c[i * 3 + 1] = b / n; c[i * 3 + 2] = d / n;
+      }
+    }
+  }
+  // write back, sampling the filled working image bilinearly
+  for (let y = 0; y < H; y++) {
+    const fy = Math.min(lh - 1, y * ks), y0 = Math.floor(fy), y1 = Math.min(lh - 1, y0 + 1), ty = fy - y0;
+    for (let x = 0; x < W; x++) {
+      const o = y * W + x; if (wacc[o]) continue;
+      const fx = Math.min(lw - 1, x * ks), x0 = Math.floor(fx), x1 = Math.min(lw - 1, x0 + 1), tx = fx - x0;
+      const q = o * 4;
+      for (let c = 0; c < 3; c++) {
+        const a = L0.c[(y0 * lw + x0) * 3 + c] + (L0.c[(y0 * lw + x1) * 3 + c] - L0.c[(y0 * lw + x0) * 3 + c]) * tx;
+        const b = L0.c[(y1 * lw + x0) * 3 + c] + (L0.c[(y1 * lw + x1) * 3 + c] - L0.c[(y1 * lw + x0) * 3 + c]) * tx;
+        acc[q + c] = a + (b - a) * ty;
+      }
+      acc[q + 3] = 255;
+    }
+  }
+  return holes / (W * H) * 100;
+}
+
+// Coverage map of the composite, sampled down so rectangle searches are cheap.
+function coverageGrid(wacc, W, H) {
+  const st = Math.max(1, Math.ceil(Math.max(W, H) / 700)), gw = Math.ceil(W / st), gh = Math.ceil(H / st);
+  const cov = new Uint8Array(gw * gh);
+  for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
+    const x = Math.min(W - 1, gx * st + (st >> 1)), y = Math.min(H - 1, gy * st + (st >> 1));
+    cov[gy * gw + gx] = wacc[y * W + x] > 0 ? 1 : 0;
+  }
+  return { cov, gw, gh, st, W, H };
+}
+// Shrink from whichever edge is emptiest until every edge is covered to within `tol`.
+function rectAt(g, tol) {
+  const { cov, gw, gh, st, W, H } = g;
+  let t = 0, b = gh - 1, l = 0, r = gw - 1;
+  const rowBad = y => { let c = 0; for (let x = l; x <= r; x++) if (!cov[y * gw + x]) c++; return c / (r - l + 1); };
+  const colBad = x => { let c = 0; for (let y = t; y <= b; y++) if (!cov[y * gw + x]) c++; return c / (b - t + 1); };
+  while (t < b && l < r) {
+    const e = [rowBad(t), rowBad(b), colBad(l), colBad(r)], m = Math.max(...e);
+    if (m <= tol) break;
+    const i = e.indexOf(m); if (i === 0) t++; else if (i === 1) b--; else if (i === 2) l++; else r--;
+  }
+  let holes = 0;
+  for (let y = t; y <= b; y++) for (let x = l; x <= r; x++) if (!cov[y * gw + x]) holes++;
+  const painted = holes / ((b - t + 1) * (r - l + 1)) * 100;
+  // pull cropped edges one cell further in; the grid only samples cell centres
+  const x0 = l > 0 ? Math.min(W, (l + 1) * st) : 0, y0 = t > 0 ? Math.min(H, (t + 1) * st) : 0;
+  const x1 = r < gw - 1 ? r * st : W, y1 = b < gh - 1 ? b * st : H;
+  const w = x1 - x0, h = y1 - y0;
+  if (w <= 0 || h <= 0) return null;
+  return { x: x0, y: y0, w, h, painted };
+}
+// Strict crop: every edge fully covered, nothing invented.
+function cropRect(wacc, W, H) {
+  const r = rectAt(coverageGrid(wacc, W, H), 0);
+  return r && r.w >= W * 0.2 && r.h >= H * 0.2 ? r : null;
+}
+// Largest rectangle whose invented share stays within the allowance the user set.
+function rectForAllowance(wacc, W, H, targetPct) {
+  const g = coverageGrid(wacc, W, H);
+  let best = rectAt(g, 0), lo = 0, hi = 1;
+  for (let i = 0; i < 12; i++) {
+    const mid = (lo + hi) / 2, r = rectAt(g, mid);
+    if (r && r.painted <= targetPct) { best = r; lo = mid; } else hi = mid;
+  }
+  return best;
+}
+
+/* ---------- preview rendering + zoom ---------- */
+let renderTok = 0, renderTimer = 0;
+function schedule(delay = 30) { clearTimeout(renderTimer); renderTimer = setTimeout(renderPreview, delay); }
+
+function fullSize() {
+  if (S.mode === 'pano') return S.pano ? panoSize() : null;
+  const L = layout(); return { W: L.W, H: L.H };
+}
+function fitZoom(W, H) {
+  const vp = $('#viewport'), pad = window.innerWidth < 760 ? 32 : 56;
+  return Math.min(1, (vp.clientWidth - pad) / W, (vp.clientHeight - pad) / H);
+}
+function zoomEff() { const v = S.view; return v ? (S.zoom ?? fitZoom(v.W, v.H)) : 1; }
+function wantK(W, H) {
+  const z = S.zoom ?? fitZoom(W, H);
+  return Math.min(1, z * (window.devicePixelRatio || 1), Math.sqrt(PREVIEW_MAX_PX / (W * H)));
+}
+
+async function renderPreview() {
+  const tok = ++renderTok;
+  const view = $('#view');
+  if (!S.items.length) { S.view = null; renderReport(); updateExportInfo(); $('#outInfo').textContent = ''; return; }
+  if (S.mode === 'pano') {
+    if (S.items.length < 2) { setStatus('Panorama needs at least two overlapping images.', 'error'); return; }
+    if (!S.pano) { if (!S.panoBusy && !S.panoErr) alignPano(); return; }
+  }
+  try {
+    const sz = fullSize(); const k = wantK(sz.W, sz.H);
+    let res;
+    if (S.mode === 'pano') {
+      res = await renderPano(k, true, (i, n) => { if (n > 2) setStatus(`Blending ${i + 1} of ${n}…`, 'busy'); });
+      if (tok !== renderTok) return;
+      S.painted = res.painted || 0;
+      setStatus(res.cropNote || (res.painted > 0.5 ? `${res.painted.toFixed(0)}% of this image is painted in, not photographed.` : ''));
+      renderReport();
+    } else res = await renderLayout(k, true);
+    view.width = res.canvas.width; view.height = res.canvas.height;
+    view.getContext('2d').drawImage(res.canvas, 0, 0);
+    S.view = res;
+    applyZoom();
+    $('#outInfo').textContent = `${nf(res.W)} × ${nf(res.H)} px · ${(res.W * res.H / 1e6).toFixed(1)} MP`;
+    updateExportInfo();
+  } catch (e) {
+    if (tok !== renderTok) return;
+    console.error(e); setStatus(e.message || String(e), 'error');
+  }
+}
+
+function applyZoom() {
+  const v = S.view; if (!v) return;
+  const z = zoomEff(), view = $('#view');
+  view.style.width = (v.canvas.width / v.k) * z + 'px';
+  view.style.height = (v.canvas.height / v.k) * z + 'px';
+  $('#zLbl').textContent = S.zoom == null ? `Fit ${Math.round(z * 100)}%` : Math.round(z * 100) + '%';
+  const need = wantK(v.W, v.H);
+  if (Math.abs(need - v.k) / v.k > 0.25) schedule(S.mode === 'pano' ? 250 : 40);
+}
+
+function setZoom(z) {
+  const vp = $('#viewport'), before = zoomEff();
+  const cx = (vp.scrollLeft + vp.clientWidth / 2) / Math.max(1, vp.scrollWidth), cy = (vp.scrollTop + vp.clientHeight / 2) / Math.max(1, vp.scrollHeight);
+  S.zoom = z == null ? null : Math.max(0.02, Math.min(8, z));
+  applyZoom();
+  if (zoomEff() !== before) { vp.scrollLeft = cx * vp.scrollWidth - vp.clientWidth / 2; vp.scrollTop = cy * vp.scrollHeight - vp.clientHeight / 2; }
+}
+
+/* ---------- report panel ---------- */
+function renderReport() {
+  const el = $('#report');
+  if (S.mode !== 'pano' || !S.items.length) { el.hidden = true; $('#toFree').hidden = true; return; }
+  el.hidden = false;
+  if (S.panoBusy) { el.innerHTML = '<h3>Alignment</h3><p class="hint">Working…</p>'; return; }
+  if (S.panoErr) { el.innerHTML = `<h3>Alignment</h3><p class="errline">${esc(S.panoErr)}</p>`; $('#toFree').hidden = true; return; }
+  const P = S.pano;
+  if (!P) { el.innerHTML = '<h3>Alignment</h3><p class="hint">Add at least two overlapping images.</p>'; return; }
+  $('#toFree').hidden = P.model !== 'translation';
+  el.innerHTML = `<h3>Alignment · ${P.placed.size} of ${S.items.length} placed</h3>
+    <table><thead><tr><th>Linked pair</th><th>Matches</th><th>Agreeing</th></tr></thead><tbody>
+    ${P.links.map(l => `<tr><td>${esc(l.a)} ↔ ${esc(l.b)}</td><td class="num">${nf(l.matches)}</td><td class="num">${nf(l.inliers)} (${Math.round(l.inliers / l.matches * 100)}%)</td></tr>`).join('')}
+    </tbody></table>
+    ${P.photo && S.opt.exposure !== 'off' ? `<p class="hint" style="margin:6px 0 0">Exposure matched: ${P.photo.summary.map(x => `${esc(x.name)} ${x.pct >= 0 ? '+' : '−'}${Math.abs(x.pct).toFixed(1)}%`).join(' · ')}${S.opt.exposure === 'full' ? (Math.abs(P.photo.falloff) < 1.5 ? ' · no lens falloff found' : ` · lens falloff removed (corners were ${P.photo.falloff > 0 ? 'darker' : 'brighter'} by ${Math.abs(P.photo.falloff).toFixed(0)}%)`) + ' · gradients smoothed' : ''}</p>` : ''}
+    ${S.mode === 'pano' && (S.opt.edges === 'fill' || S.opt.edges === 'trim') && S.painted > 0.5 ? `<p class="warnline">${S.painted.toFixed(0)}% of the frame is painted in from surrounding pixels — invented, not photographed. Fine for flat sky or water; soft over detailed subjects.</p>` : ''}
+    ${P.unplaced.length ? `<p class="warnline">Couldn’t place: ${P.unplaced.map(esc).join(', ')} — not enough shared detail with the others. They’re left out of the result.</p>` : ''}`;
+}
+
+/* ---------- export ---------- */
+function exportDims() {
+  if (!S.view) return null;
+  const s = S.opt.scale; return { W: Math.round(S.view.W * s), H: Math.round(S.view.H * s) };
+}
+function updateExportInfo() {
+  const d = exportDims(), el = $('#exportInfo'), btn = $('#download');
+  if (!d) { el.textContent = '—'; btn.disabled = true; return; }
+  const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[S.opt.format];
+  const tooBig = d.W * d.H > EXPORT_MAX_PX;
+  el.textContent = `${(S.opt.name || 'stitched').trim()}.${ext} · ${nf(d.W)} × ${nf(d.H)} px` + (tooBig ? ' — too large, pick a smaller size' : '');
+  btn.disabled = tooBig || S.panoBusy;
+}
+async function doExport() {
+  const d = exportDims(); if (!d) return;
+  const btn = $('#download'); btn.disabled = true;
+  try {
+    setStatus('Rendering full resolution…', 'busy'); await tick();
+    const s = S.opt.scale;
+    let res = S.mode === 'pano' ? await renderPano(s, false, (i, n) => setStatus(`Rendering ${i + 1} of ${n} at full resolution…`, 'busy')) : await renderLayout(s, false);
+    let c = res.canvas;
+    if (S.opt.format === 'image/jpeg' && S.opt.transparent) {
+      const f = mkCanvas(c.width, c.height), fx = f.getContext('2d'); fx.fillStyle = '#ffffff'; fx.fillRect(0, 0, f.width, f.height); fx.drawImage(c, 0, 0); c = f;
+    }
+    setStatus('Encoding…', 'busy'); await tick();
+    const blob = await new Promise(r => c.toBlob(r, S.opt.format, S.opt.quality));
+    if (!blob) throw new Error('The browser couldn’t encode an image this large. Pick a smaller Size and try again.');
+    const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[S.opt.format];
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `${(S.opt.name || 'stitched').trim()}.${ext}`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    setStatus(`Saved ${a.download} · ${(blob.size / 1048576).toFixed(1)} MB`);
+  } catch (e) { console.error(e); setStatus(e.message || String(e), 'error'); }
+  finally { updateExportInfo(); }
+}
+
+/* ---------- freeform interaction + panning ---------- */
+function updateFreePos() {
+  const it = S.items.find(i => i.id === S.sel);
+  $('#freePos').textContent = it && it.x != null ? `${it.name.length > 18 ? it.name.slice(0, 17) + '…' : it.name}  x ${nf(it.x)}  y ${nf(it.y)}` : 'Click an image';
+}
+function initPointer() {
+  const vp = $('#viewport'), view = $('#view');
+  let drag = null;
+  vp.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || !S.view) return;
+    if (S.mode === 'free' && e.target === view) {
+      const z = zoomEff(), v = S.view;
+      const r = view.getBoundingClientRect();
+      const fx = (e.clientX - r.left) / z, fy = (e.clientY - r.top) / z;
+      const hit = [...v.R].reverse().find(q => fx >= q.x && fx <= q.x + q.w && fy >= q.y && fy <= q.y + q.h);
+      if (hit) {
+        S.sel = hit.it.id; renderList();
+        drag = { kind: 'move', it: hit.it, sx: e.clientX, sy: e.clientY, x0: hit.it.x, y0: hit.it.y, z };
+        vp.setPointerCapture(e.pointerId); schedule(0); e.preventDefault(); return;
+      }
+    }
+    drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, l: vp.scrollLeft, t: vp.scrollTop };
+    vp.classList.add('panning'); vp.setPointerCapture(e.pointerId);
+  });
+  vp.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (drag.kind === 'pan') { vp.scrollLeft = drag.l - (e.clientX - drag.sx); vp.scrollTop = drag.t - (e.clientY - drag.sy); return; }
+    drag.it.x = Math.round(drag.x0 + (e.clientX - drag.sx) / drag.z);
+    drag.it.y = Math.round(drag.y0 + (e.clientY - drag.sy) / drag.z);
+    updateFreePos(); requestFrame();
+  });
+  const end = () => { if (drag) { drag = null; vp.classList.remove('panning'); } };
+  vp.addEventListener('pointerup', end); vp.addEventListener('pointercancel', end);
+  vp.addEventListener('wheel', e => {
+    if (!(e.ctrlKey || e.metaKey) || !S.view) return;
+    e.preventDefault(); setZoom(zoomEff() * Math.exp(-e.deltaY * 0.0025));
+  }, { passive: false });
+  document.addEventListener('keydown', e => {
+    if (S.mode !== 'free' || !S.sel || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+    const d = e.shiftKey ? 10 : 1, it = S.items.find(i => i.id === S.sel); if (!it) return;
+    const m = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key]; if (!m) return;
+    e.preventDefault(); it.x += m[0]; it.y += m[1]; updateFreePos(); requestFrame();
+  });
+}
+let raf = 0;
+function requestFrame() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderPreview(); }); }
+
+/* ---------- sample scene (so the tool opens showing what it does) ---------- */
+async function loadSample() {
+  const W = 2600, H = 1000, c = mkCanvas(W, H), x = c.getContext('2d'), r = rng(7);
+  const sky = x.createLinearGradient(0, 0, 0, H * .62); sky.addColorStop(0, '#3F6FA8'); sky.addColorStop(1, '#F1C39A');
+  x.fillStyle = sky; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#FFE7B8'; x.beginPath(); x.arc(1720, 380, 70, 0, 7); x.fill();
+  for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(255,255,255,${.25 + r() * .4})`; x.beginPath(); x.ellipse(r() * W, 60 + r() * 260, 40 + r() * 120, 10 + r() * 22, 0, 0, 7); x.fill(); }
+  [['#8390AA', 470, 90], ['#5D6B85', 540, 70], ['#3E4C63', 610, 55]].forEach(([col, base, amp]) => {
+    x.fillStyle = col; x.beginPath(); x.moveTo(0, H); let y = base;
+    for (let px = 0; px <= W; px += 6) { y += (r() - .5) * 14 + (base - y) * .02; x.lineTo(px, y - Math.abs(Math.sin(px / 180)) * amp); }
+    x.lineTo(W, H); x.fill();
+  });
+  for (let bx = 20; bx < W;) {
+    const bw = 40 + r() * 90, bh = 110 + r() * 300, top = 780 - bh;
+    x.fillStyle = `hsl(${205 + r() * 20},${14 + r() * 10}%,${16 + r() * 12}%)`; x.fillRect(bx, top, bw, bh);
+    for (let wy = top + 10; wy < 770; wy += 16) for (let wx = bx + 6; wx < bx + bw - 10; wx += 13)
+      if (r() > .45) { x.fillStyle = r() > .3 ? '#F6D27A' : '#9BB8D9'; x.fillRect(wx, wy, 7, 9); }
+    bx += bw + 4 + r() * 26;
+  }
+  x.fillStyle = '#26332A'; x.fillRect(0, 780, W, H - 780);
+  for (let i = 0; i < 90; i++) { const tx = r() * W, ty = 790 + r() * 190, s = 16 + r() * 34; x.fillStyle = `hsl(${120 + r() * 30},30%,${18 + r() * 14}%)`; x.beginPath(); x.moveTo(tx, ty - s * 2); x.lineTo(tx - s * .7, ty); x.lineTo(tx + s * .7, ty); x.fill(); }
+  x.fillStyle = 'rgba(255,255,255,.85)'; x.font = '600 34px system-ui,sans-serif';
+  [['NORTH PIER', 180, 860], ['DOCK 4', 900, 900], ['HARBOUR RD', 1500, 870], ['TERMINAL', 2200, 910]].forEach(([t, tx, ty]) => x.fillText(t, tx, ty));
+  const crops = [['sample-left.jpg', 0, 70, 0], ['sample-middle.jpg', 760, 20, .07], ['sample-right.jpg', 1500, 110, -.04]];
+  const out = [];
+  for (const [name, cx, cy, ex] of crops) {
+    const f = mkCanvas(1100, 860), fx = f.getContext('2d');
+    fx.drawImage(c, cx, cy, 1100, 860, 0, 0, 1100, 860);
+    if (ex) { fx.fillStyle = ex > 0 ? `rgba(255,255,255,${ex})` : `rgba(0,0,0,${-ex})`; fx.fillRect(0, 0, 1100, 860); }
+    out.push(makeItem(name, await createImageBitmap(f)));
+  }
+  S.items = out; S.sample = true; placeFreeDefaults(); itemsChanged();
+}
+
+/* ---------- wiring ---------- */
+function init() {
+  bindOptions(); initPointer();
+  const file = $('#file');
+  const pick = () => file.click();
+  $('#addTop').onclick = pick; $('#addEmpty').onclick = pick;
+  file.onchange = () => { if (file.files.length) addFiles(file.files); file.value = ''; };
+  $('#clearAll').onclick = () => { clearItems(); S.sample = false; S.view = null; itemsChanged(); setStatus(''); };
+  $('#zIn').onclick = () => setZoom(zoomEff() * 1.5);
+  $('#zOut').onclick = () => setZoom(zoomEff() / 1.5);
+  $('#zFit').onclick = () => setZoom(null);
+  $('#z100').onclick = () => setZoom(1);
+  $('#download').onclick = doExport;
+  $('#realign').onclick = () => { for (const it of S.items) { it.feat?.des.delete(); it.feat = null; } invalidatePano(); schedule(0); };
+  $('#toFree').onclick = () => {
+    const P = S.pano; if (!P) return;
+    for (const it of S.items) { const G = P.G.get(it.id); if (G) { it.x = Math.round(G[2] - P.bbox.x0); it.y = Math.round(G[5] - P.bbox.y0); } }
+    S.mode = 'free'; document.getElementById('m-free').checked = true; modeUI(); renderList(); schedule(0);
+  };
+  let depth = 0;
+  window.addEventListener('dragenter', e => { if ([...e.dataTransfer.types].includes('Files')) { depth++; document.body.classList.add('dropping'); } });
+  window.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; document.body.classList.remove('dropping'); } });
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => { e.preventDefault(); depth = 0; document.body.classList.remove('dropping'); if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+  window.addEventListener('paste', e => { const f = [...(e.clipboardData?.files || [])]; if (f.length) addFiles(f); });
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.zoom == null) applyZoom(); }, 100); });
+  loadSample();
+}
+init();
+</script>
+</body>
+</html>
