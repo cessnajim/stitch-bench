@@ -117,8 +117,44 @@ automatically.
 | Tool | What it does |
 | --- | --- |
 | `stitch_panorama` | Aligns overlapping photos, corrects exposure, writes the image, reports what was placed, corrected and painted in |
+| `find_bursts` | Groups a folder of pictures into the sweeps they were shot as, by capture time. Writes nothing, opens no browser |
 | `inspect_alignment` | Dry run — which frames link to which, with match counts, and the size the result would be. Writes nothing |
 | `stitch_layout` | Row, column or grid layout for contact sheets, comparisons and tiles |
+
+### Pointing it at a folder
+
+Every tool takes directories as well as files. Naming files means *stitch these*; naming a directory
+means *work out what is in here*, which is the harder question, because a folder of a day's shooting
+holds several sweeps and a scattering of loose shots.
+
+A directory is split into **bursts** by capture time — `DateTimeOriginal` from each file's Exif,
+falling back to the file's own date when a camera wrote none — and each burst is stitched on its
+own. The convention matches `tools/find_bursts.py`: a gap longer than `gap_seconds` (10 by default)
+starts a new burst, and a run shorter than `min_frames` (3) is reported as loose shots rather than
+stitched. `find_bursts` shows the grouping without rendering anything, which is the cheap first call
+when you do not know what a folder holds.
+
+Each burst is then collected into its own folder beside the frames it came from:
+
+```
+~/Pictures/hike/
+├── DSC_0101.NEF … DSC_0148.NEF     ← originals, untouched
+├── burst-01/
+│   ├── DSC_0101.NEF … DSC_0112.NEF ← copies of the twelve frames that made this one
+│   └── panorama.jpg
+└── burst-02/
+    ├── DSC_0119.NEF … DSC_0131.NEF
+    └── panorama.jpg
+```
+
+The originals stay where they are. `collect: "hardlink"` links instead of copying, which is free for
+a set of RAWs but only works within one filesystem, and `collect: "none"` writes just the panorama.
+Re-running skips both the folders and the panoramas of the previous run, so a second pass over the
+same directory does not fold its own output back in.
+
+Grouping only happens when a directory was named. An explicit list of files is one panorama, as
+before: you have already done the grouping. `group: "bursts"` or `group: "single"` overrides either
+way.
 
 Each returns structured output plus a small preview image, and reports progress while it works —
 a full-resolution stitch of two dozen 24MP frames takes minutes, and a silent tool call that long
@@ -130,6 +166,14 @@ only where it is told.
 Optional helpers for pulling source frames out of a self-hosted [Immich](https://immich.app) DAM
 through its MCP gateway, and pushing results back. Configure with `DAM_MCP_URL` and, for a private
 CA, `DAM_CA_PEM`. Unrelated to the stitcher itself — it only ever reads files from disk.
+
+## CONTEXT.md and ADRs
+
+[`CONTEXT.md`](CONTEXT.md) is the glossary: what a frame, an overlap, a log gain, a shading field and
+an invented share are, and which words this project deliberately does not use. [`docs/adr/`](docs/adr)
+records the decisions behind the photometric pipeline that are surprising without the reasoning —
+why exposure is solved as log gains, why the shading fit has to earn its place, why no measure of
+evenness is allowed to gate anything, and why there is only one implementation.
 
 ## License
 
