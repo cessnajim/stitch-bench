@@ -1,5 +1,6 @@
 'use strict';
 const suites = [
+  ['sources: folders, capture times, bursts', require('./sources.test.js')],
   ['basics', require('./basics.test.js')],
   ['synthetic exposure + vignette', require('./synthetic.test.js')],
   ['ragged edges', require('./edges.test.js')],
