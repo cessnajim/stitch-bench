@@ -52,7 +52,7 @@ module.exports = async function run() {
   try {
     const { tools } = await client.listTools();
     const names = tools.map(t => t.name).sort();
-    pass = ok('exposes its tools', names.join(',') === 'inspect_alignment,stitch_layout,stitch_panorama', names.join(', ')) && pass;
+    pass = ok('exposes its tools', names.join(',') === 'find_bursts,inspect_alignment,stitch_layout,stitch_panorama', names.join(', ')) && pass;
     pass = ok('every tool is described', tools.every(t => (t.description || '').length > 80 && t.inputSchema), '') && pass;
 
     // Long-running by nature: ask for progress and allow for it, as a real client should.
@@ -66,14 +66,59 @@ module.exports = async function run() {
     const out = path.join(FIX, 'out', 'pano.jpg');
     fs.rmSync(path.dirname(out), { recursive: true, force: true });
     const res = await client.callTool({ name: 'stitch_panorama', arguments: { images, output: out, preview: true } }, undefined, opts);
-    const r = res.structuredContent || {};
+    const top = res.structuredContent || {};
+    const r = (top.panoramas || [])[0] || {};
     pass = ok('stitch_panorama writes the file', fs.existsSync(out) && fs.statSync(out).size > 10000,
       fs.existsSync(out) ? `${(fs.statSync(out).size / 1024).toFixed(0)} KB` : 'missing') && pass;
+    // An explicit list of files is one panorama, and is not collected into a folder: naming the
+    // files is the caller saying they have already done the grouping.
+    pass = ok('an explicit list stays one ungrouped panorama',
+      top.count === 1 && top.grouped_by_burst === false && r.directory === null,
+      `count ${top.count}, grouped ${top.grouped_by_burst}`) && pass;
     pass = ok('reports what it produced', r.width > 2000 && r.frames_placed === 3 && r.megapixels > 1,
       `${r.width}x${r.height}, ${r.megapixels} MP, ${r.frames_placed}/3 frames`) && pass;
     pass = ok('reports the exposure work', !!r.exposure && Array.isArray(r.exposure.per_frame_change_percent),
       r.exposure ? `${r.exposure.per_frame_change_percent.length} frames adjusted, shading: ${r.exposure.shading}` : 'none') && pass;
     pass = ok('returns a preview image', (res.content || []).some(c => c.type === 'image'), '') && pass;
+
+    // A folder, as a camera leaves it: no explicit list, no output path, capture times a few
+    // seconds apart. This is the path an agent takes when it is simply pointed at a directory.
+    const burstDir = path.join(FIX, 'burst-src');
+    fs.rmSync(burstDir, { recursive: true, force: true });
+    fs.mkdirSync(burstDir, { recursive: true });
+    images.forEach((src, i) => {
+      const dst = path.join(burstDir, path.basename(src));
+      fs.copyFileSync(src, dst);
+      const when = new Date(Date.parse('2026-04-11T09:00:00') + i * 4000);
+      fs.utimesSync(dst, when, when);
+    });
+
+    const found = await client.callTool({ name: 'find_bursts', arguments: { images: [burstDir] } }, undefined, opts);
+    const fb = found.structuredContent || {};
+    pass = ok('find_bursts groups a folder into one sweep',
+      (fb.bursts || []).length === 1 && fb.bursts[0].frames === 3,
+      `${(fb.bursts || []).length} burst(s), ${fb.files_found} files, times from ${fb.time_source}`) && pass;
+    pass = ok('find_bursts writes nothing and opens no browser',
+      fs.readdirSync(burstDir).length === 3, `${fs.readdirSync(burstDir).length} files left`) && pass;
+
+    const grouped = await client.callTool({ name: 'stitch_panorama', arguments: { images: [burstDir], scale: 0.5 } }, undefined, opts);
+    const g = grouped.structuredContent || {};
+    const cell = path.join(burstDir, 'burst-01');
+    pass = ok('a directory stitches each burst it finds',
+      g.count === 1 && g.grouped_by_burst === true, `count ${g.count}, grouped ${g.grouped_by_burst}`) && pass;
+    pass = ok('the burst gets its own folder with the panorama in it',
+      fs.existsSync(path.join(cell, 'panorama.jpg')), fs.existsSync(cell) ? fs.readdirSync(cell).join(',') : 'no folder') && pass;
+    pass = ok('the frames that made it are copied in beside it',
+      images.every(f => fs.existsSync(path.join(cell, path.basename(f)))), '') && pass;
+    pass = ok('the originals are left where they were',
+      images.every(f => fs.existsSync(path.join(burstDir, path.basename(f)))), '') && pass;
+    pass = ok('and the folder is reported back',
+      (g.panoramas || [])[0]?.directory === cell, (g.panoramas || [])[0]?.directory || 'none') && pass;
+
+    // Running it twice must not fold the first panorama into the second.
+    const again = await client.callTool({ name: 'find_bursts', arguments: { images: [burstDir], recursive: true } }, undefined, opts);
+    pass = ok('a second pass ignores what the first one wrote',
+      (again.structuredContent || {}).files_found === 3, `${(again.structuredContent || {}).files_found} files found`) && pass;
 
     const sheet = path.join(FIX, 'out', 'sheet.jpg');
     const lay = await client.callTool({ name: 'stitch_layout', arguments: { images, mode: 'grid', columns: 2, gap: 12, output: sheet } }, undefined, opts);
