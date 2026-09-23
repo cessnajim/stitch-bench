@@ -7,138 +7,198 @@
 <style>
 :root{
   color-scheme: light dark;
-  --bg:#E9ECEF; --panel:#FFFFFF; --panel-2:#F5F6F8; --ink:#1A1F24; --muted:#5B646E; --line:#D3D8DD;
-  --accent:#B0245F; --accent-ink:#FFFFFF; --accent-soft:#F7E4EC;
-  --ok:#2C7A4B; --warn:#9A5A08; --bad:#B3261E;
-  --check1:#DDE1E5; --check2:#F3F4F6; --shadow:rgba(20,28,36,.14);
+  --bg:#E8EBEE; --panel:#FFFFFF; --panel-2:#F4F6F8; --ink:#171C21; --muted:#5C656F; --faint:#8A939C;
+  --line:#D6DBE0; --line-2:#E7EAEE;
+  --accent:#A81E5A; --accent-ink:#FFFFFF; --accent-soft:#F8E5ED; --accent-line:#E8B9CE;
+  --ok:#27724A; --warn:#8F5406; --bad:#AD2119;
+  --check1:#DDE1E5; --check2:#F3F4F6; --shadow:rgba(16,24,32,.13);
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r:7px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#111416; --panel:#1A1E22; --panel-2:#22272C; --ink:#E3E7EA; --muted:#97A0A9; --line:#2D3339;
-    --accent:#E8649D; --accent-ink:#1C0711; --accent-soft:#3A1E2A;
-    --ok:#62C48F; --warn:#E3A652; --bad:#F2766D;
-    --check1:#1D2125; --check2:#272C31; --shadow:rgba(0,0,0,.5);
+    --bg:#0F1214; --panel:#191D21; --panel-2:#212629; --ink:#E4E8EB; --muted:#98A1AA; --faint:#79838C;
+    --line:#2C3238; --line-2:#242A2F;
+    --accent:#EC6BA2; --accent-ink:#1A0610; --accent-soft:#361B27; --accent-line:#5A2E41;
+    --ok:#5FC28C; --warn:#DFA352; --bad:#F0746B;
+    --check1:#1C2024; --check2:#262B30; --shadow:rgba(0,0,0,.55);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#111416; --panel:#1A1E22; --panel-2:#22272C; --ink:#E3E7EA; --muted:#97A0A9; --line:#2D3339;
-  --accent:#E8649D; --accent-ink:#1C0711; --accent-soft:#3A1E2A;
-  --ok:#62C48F; --warn:#E3A652; --bad:#F2766D;
-  --check1:#1D2125; --check2:#272C31; --shadow:rgba(0,0,0,.5);
+  --bg:#0F1214; --panel:#191D21; --panel-2:#212629; --ink:#E4E8EB; --muted:#98A1AA; --faint:#79838C;
+  --line:#2C3238; --line-2:#242A2F;
+  --accent:#EC6BA2; --accent-ink:#1A0610; --accent-soft:#361B27; --accent-line:#5A2E41;
+  --ok:#5FC28C; --warn:#DFA352; --bad:#F0746B;
+  --check1:#1C2024; --check2:#262B30; --shadow:rgba(0,0,0,.55);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 [hidden]{display:none!important}
 button,input,select{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 .shell{display:grid;grid-template-rows:auto 1fr;height:100%}
-.top{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em;font-size:15px}
-.brand svg{color:var(--accent)}
-.brand small{font-weight:400;color:var(--muted);font-size:13px}
+.top{display:flex;align-items:center;gap:14px;padding:9px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:660;letter-spacing:-.01em;font-size:15px;white-space:nowrap}
+.brand svg{color:var(--accent);flex:none}
 .top .spacer{flex:1}
+.top .hint{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.app{display:grid;grid-template-columns:340px minmax(0,1fr);min-height:0}
-.side{order:-1;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:22px}
-.side section{display:flex;flex-direction:column;gap:10px}
-.side h2{margin:0;font-size:11px;font-weight:650;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;gap:8px}
-.side h2 .count{font-family:var(--mono);color:var(--ink);letter-spacing:0}
-.side h2 .grow{flex:1}
+.app{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:0}
+.side{order:-1;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:18px}
+.side section{display:flex;flex-direction:column;gap:9px}
+h2{margin:0;font-size:11px;font-weight:660;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);display:flex;align-items:center;gap:8px}
+h2 .count{font-family:var(--mono);color:var(--muted);letter-spacing:0;font-size:11.5px}
+h2 .grow{flex:1}
 
-.btn{appearance:none;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 11px;cursor:pointer;line-height:1.2;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-.btn:hover{background:var(--panel-2)}
-.btn:disabled{opacity:.5;cursor:default}
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel);border-radius:var(--r);padding:6px 11px;cursor:pointer;line-height:1.2;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--panel-2);border-color:var(--muted)}
+.btn:active{transform:translateY(.5px)}
+.btn:disabled{opacity:.45;cursor:default;transform:none}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
-.btn.primary:hover{filter:brightness(1.07)}
-.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
-.btn.ghost:hover{color:var(--ink);background:var(--panel-2)}
-.btn.icon{padding:4px 7px;font-family:var(--mono)}
-.btn.block{justify-content:center;width:100%;padding:9px 12px}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted);padding:4px 8px}
+.btn.ghost:hover{color:var(--ink);background:var(--panel-2);border-color:transparent}
+.btn.icon{padding:4px 8px;font-family:var(--mono);min-width:30px}
+.btn.block{width:100%;padding:10px 12px}
+.btn.on{background:var(--accent-soft);border-color:var(--accent-line);color:var(--ink)}
 
-.drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel-2)}
+.drop{border:1.5px dashed var(--line);border-radius:9px;padding:15px 12px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel-2);transition:border-color .12s,background .12s}
 .drop:hover,.drop.over{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
-.drop strong{color:var(--ink);font-weight:600}
+.drop strong{color:var(--ink);font-weight:600;display:block}
+.drop small{font-size:12px}
 .drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 
 .note{font-size:12.5px;color:var(--muted);margin:0}
-.note.sample{background:var(--accent-soft);color:var(--ink);padding:8px 10px;border-radius:6px}
+.note.sample{background:var(--accent-soft);color:var(--ink);padding:7px 9px;border-radius:6px;display:flex;gap:8px;align-items:center}
+.note.sample button{margin-left:auto}
 
-.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.item{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px;border:1px solid var(--line);border-radius:7px;cursor:pointer;background:var(--panel)}
-.item.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.item img{width:52px;height:40px;object-fit:cover;border-radius:4px;display:block;background:var(--check1)}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;max-height:330px;overflow:auto}
+.item{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:9px;align-items:center;padding:5px;border:1px solid var(--line-2);border-radius:var(--r);cursor:pointer;background:var(--panel);transition:border-color .12s,background .12s}
+.item:hover{background:var(--panel-2);border-color:var(--line)}
+.item.sel{border-color:var(--accent);background:var(--accent-soft)}
+.item img{width:48px;height:36px;object-fit:cover;border-radius:4px;display:block;background:var(--check1)}
 .item .meta{min-width:0}
-.item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:550}
-.item .dims{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
-.item .acts{display:flex;gap:2px}
-.pill{font-family:system-ui,sans-serif;font-size:10.5px;font-weight:650;letter-spacing:.03em;padding:1px 6px;border-radius:99px;text-transform:uppercase}
-.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
-.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:550;font-size:13px}
+.item .dims{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;flex-wrap:wrap;gap:3px 7px;align-items:center}
+.item .acts{display:flex;gap:1px;opacity:.55}
+.item:hover .acts,.item.sel .acts{opacity:1}
+.pill{font-size:10px;font-weight:660;letter-spacing:.04em;padding:1px 5px;border-radius:99px;text-transform:uppercase}
+.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 15%,transparent)}
 .pill.raw{color:var(--muted);background:var(--panel-2);border:1px solid var(--line)}
-.pill.ref{color:var(--accent);background:var(--accent-soft)}
+.pill.ref{color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line)}
 
-.seg{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel-2)}
 .seg input{position:absolute;opacity:0;pointer-events:none}
-.seg label{text-align:center;padding:7px 2px;font-size:12.5px;cursor:pointer;border-left:1px solid var(--line);color:var(--muted)}
+.seg label{text-align:center;padding:7px 2px;font-size:12px;cursor:pointer;border-left:1px solid var(--line);color:var(--muted);transition:background .12s,color .12s}
 .seg label:first-of-type{border-left:0}
-.seg input:checked+label{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg label:hover{background:var(--panel);color:var(--ink)}
+.seg input:checked+label{background:var(--accent);color:var(--accent-ink);font-weight:620}
 .seg input:focus-visible+label{outline:2px solid var(--accent);outline-offset:-3px}
 
-.field{display:grid;grid-template-columns:118px minmax(0,1fr);align-items:center;gap:10px}
-.field>label{color:var(--muted);font-size:13px}
+.result{border:1px solid var(--line);border-radius:9px;padding:10px 11px;display:flex;flex-direction:column;gap:9px;background:var(--panel-2)}
+.result .headline{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.result .big{font-size:15px;font-weight:640}
+.result .sub{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.result .facts{display:flex;flex-wrap:wrap;gap:4px}
+.result .fact{font-size:11.5px;padding:2px 7px;border-radius:99px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+.result .fact.good{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,var(--line))}
+.result .fact.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 35%,var(--line))}
+.result .row{display:flex;gap:6px}
+.result .row .btn{flex:1}
+
+details.tune{border-top:1px solid var(--line-2);padding-top:10px}
+details.tune>summary{cursor:pointer;font-size:11px;font-weight:660;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);list-style:none;display:flex;align-items:center;gap:6px;padding:2px 0}
+details.tune>summary::-webkit-details-marker{display:none}
+details.tune>summary::before{content:"▸";font-size:10px;transition:transform .15s}
+details.tune[open]>summary::before{transform:rotate(90deg)}
+details.tune>summary:hover{color:var(--ink)}
+details.tune .body{display:flex;flex-direction:column;gap:10px;padding-top:11px}
+
+.field{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:center;gap:9px}
+.field>label{color:var(--muted);font-size:12.5px}
 .field select,.field input[type=number],.field input[type=text]{width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.field select:hover,.field input:hover{border-color:var(--muted)}
 .field input[type=range]{width:100%;accent-color:var(--accent)}
 .field .inline{display:flex;align-items:center;gap:8px;min-width:0}
-.field .inline output{font-family:var(--mono);font-size:12px;min-width:38px;text-align:right}
-.check{display:flex;align-items:center;gap:8px;font-size:13px}
+.field .inline output{font-family:var(--mono);font-size:12px;min-width:36px;text-align:right;color:var(--muted)}
+.check{display:flex;align-items:center;gap:7px;font-size:12.5px}
 .check input{accent-color:var(--accent)}
-input[type=color]{width:34px;height:26px;padding:0 2px;border:1px solid var(--line);border-radius:5px;background:var(--panel)}
+input[type=color]{width:32px;height:25px;padding:0 2px;border:1px solid var(--line);border-radius:5px;background:var(--panel)}
 .hint{font-size:12px;color:var(--muted);margin:0}
-.dims-out{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.dims-out{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 
-.stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-width:0;min-height:0}
-.toolbar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
-.toolbar .zoom{font-family:var(--mono);font-size:12px;min-width:48px;text-align:center}
-.toolbar .sep{width:1px;height:20px;background:var(--line);margin:0 4px}
-.status{flex:1;min-width:160px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:8px;justify-content:flex-end;text-align:right}
+.stage{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;min-width:0;min-height:0;position:relative}
+.toolbar{grid-row:1}.progress{grid-row:2}.viewport{grid-row:3}.report{grid-row:4}
+.toolbar{display:flex;align-items:center;gap:5px;padding:7px 11px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.toolbar .zoom{font-family:var(--mono);font-size:12px;min-width:52px;text-align:center;color:var(--muted)}
+.toolbar .sep{width:1px;height:18px;background:var(--line);margin:0 5px}
+.status{flex:1;min-width:140px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;justify-content:flex-end;text-align:right}
 .status.busy::before{content:"";width:10px;height:10px;border-radius:50%;border:2px solid var(--accent);border-right-color:transparent;animation:spin .8s linear infinite;flex:none}
 .status.error{color:var(--bad)}
 @keyframes spin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.status.busy::before{animation:none}}
+
+.progress{height:2px;background:var(--line-2);overflow:hidden}
+.progress>div{height:100%;width:0;background:var(--accent);transition:width .25s ease}
+.progress.indet>div{width:35%;animation:slide 1.1s ease-in-out infinite}
+@keyframes slide{0%{margin-left:-35%}100%{margin-left:100%}}
 
 .viewport{overflow:auto;position:relative;background:var(--bg);touch-action:none}
 .viewport.pan{cursor:grab}
 .viewport.panning{cursor:grabbing}
-.canvas-wrap{display:flex;min-width:100%;min-height:100%;width:max-content;padding:28px}
-#view{margin:auto;display:block;flex:none;box-shadow:0 0 0 1px var(--line),0 10px 32px var(--shadow);
-  background-color:var(--check2);background-image:conic-gradient(var(--check1) 25%,transparent 0 50%,var(--check1) 0 75%,transparent 0);background-size:16px 16px;image-rendering:auto}
-#view.free{cursor:move}
-.empty{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
-.empty .box{max-width:360px;display:flex;flex-direction:column;gap:10px;align-items:center}
-.empty h3{margin:0;color:var(--ink);font-size:17px}
-.empty p{margin:0}
+.canvas-wrap{display:flex;min-width:100%;min-height:100%;width:max-content;padding:26px}
+.stack{position:relative;margin:auto;flex:none;box-shadow:0 0 0 1px var(--line),0 12px 34px var(--shadow)}
+#view,#overlay{display:block;width:100%;height:100%}
+#view{background-color:var(--check2);background-image:conic-gradient(var(--check1) 25%,transparent 0 50%,var(--check1) 0 75%,transparent 0);background-size:16px 16px}
+#overlay{position:absolute;inset:0;pointer-events:none}
+.stack.free{cursor:move}
+
+.empty{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted);background:var(--bg)}
+.empty .box{max-width:380px;display:flex;flex-direction:column;gap:12px;align-items:center}
+.empty h3{margin:0;color:var(--ink);font-size:18px;letter-spacing:-.01em}
+.empty p{margin:0;font-size:13px}
+.empty .row{display:flex;gap:8px}
 .dropping .viewport{outline:3px dashed var(--accent);outline-offset:-10px}
 
-.report{border-top:1px solid var(--line);background:var(--panel);padding:10px 14px;max-height:34vh;overflow:auto;font-size:13px}
-.report h3{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:650}
-.report table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
-.report td,.report th{padding:4px 8px 4px 0;text-align:left;vertical-align:top}
-.report th{font-weight:500;color:var(--muted);font-size:12px}
-.report td.num{font-family:var(--mono);font-size:12px}
-.report .warnline{color:var(--warn);margin:6px 0 0}
-.report .errline{color:var(--bad);margin:0}
+.toast{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 15px;border-radius:99px;font-size:13px;font-weight:550;box-shadow:0 8px 24px var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:5}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
 
-@media (max-width:760px){
+.report{border-top:1px solid var(--line);background:var(--panel);max-height:32vh;overflow:auto;font-size:13px}
+.report>summary{cursor:pointer;padding:8px 13px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:660;list-style:none;display:flex;align-items:center;gap:7px;position:sticky;top:0;background:var(--panel)}
+.report>summary::-webkit-details-marker{display:none}
+.report>summary::before{content:"▸";font-size:10px;transition:transform .15s}
+.report[open]>summary::before{transform:rotate(90deg)}
+.report .body{padding:0 13px 11px}
+.report table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.report td,.report th{padding:3px 10px 3px 0;text-align:left;vertical-align:top}
+.report th{font-weight:500;color:var(--faint);font-size:11.5px}
+.report td.num{font-family:var(--mono);font-size:12px}
+.report .warnline{color:var(--warn);margin:7px 0 0;font-size:12.5px}
+.report .errline{color:var(--bad);margin:0}
+.report .hint{margin:7px 0 0}
+#map{display:block;border:1px solid var(--line);border-radius:6px;margin:9px 0 0;background:var(--panel-2);max-width:100%}
+
+dialog#help{border:1px solid var(--line);border-radius:12px;padding:0;background:var(--panel);color:var(--ink);max-width:420px;box-shadow:0 20px 60px var(--shadow)}
+dialog#help::backdrop{background:rgba(10,14,18,.45)}
+dialog#help .hd{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);font-weight:640}
+dialog#help .hd .grow{flex:1}
+dialog#help .bd{padding:14px 16px;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:13px;align-items:baseline}
+dialog#help kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;white-space:nowrap}
+dialog#help .sect{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:660;margin-top:6px}
+
+@media (max-width:820px){
   html,body{height:auto}
   .shell{height:auto}
   .app{grid-template-columns:1fr}
-  .stage{height:68vh;border-bottom:1px solid var(--line)}
   .side{order:0;border-right:0}
-  .field{grid-template-columns:104px minmax(0,1fr)}
-  .canvas-wrap{padding:16px}
+  .stage{height:62vh;border-bottom:1px solid var(--line)}
+  .field{grid-template-columns:100px minmax(0,1fr)}
+  .canvas-wrap{padding:14px}
+  .top .hint{display:none}
+  .list{max-height:none}
 }
 </style>
 </head>
@@ -146,136 +206,150 @@ input[type=color]{width:34px;height:26px;padding:0 2px;border:1px solid var(--li
 <div class="shell">
   <header class="top">
     <div class="brand">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 1.5v21M1.5 12h21"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
-      Stitch Bench <small>align · stitch · export</small>
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 1.5v21M1.5 12h21"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
+      Stitch Bench
     </div>
+    <div class="hint" id="topHint">Drop overlapping photos anywhere — they stitch automatically.</div>
     <div class="spacer"></div>
     <button class="btn" id="addTop" type="button">Add images</button>
+    <button class="btn ghost icon" id="helpBtn" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
   </header>
 
   <div class="app">
     <main class="stage" aria-label="Preview">
       <div class="toolbar">
-        <button class="btn icon" id="zOut" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+        <button class="btn icon" id="zOut" type="button" title="Zoom out (−)" aria-label="Zoom out">−</button>
         <span class="zoom" id="zLbl">Fit</span>
-        <button class="btn icon" id="zIn" type="button" title="Zoom in" aria-label="Zoom in">+</button>
-        <button class="btn" id="zFit" type="button">Fit</button>
-        <button class="btn" id="z100" type="button">100%</button>
+        <button class="btn icon" id="zIn" type="button" title="Zoom in (+)" aria-label="Zoom in">+</button>
+        <button class="btn" id="zFit" type="button" title="Fit (0)">Fit</button>
+        <button class="btn" id="z100" type="button" title="Actual pixels (1)">100%</button>
         <span class="sep"></span>
+        <button class="btn" id="compare" type="button" hidden title="Hold to see the original exposures (C)">Hold to compare</button>
         <span class="dims-out" id="outInfo"></span>
         <div class="status" id="status" role="status" aria-live="polite"></div>
       </div>
-      <div class="viewport" id="viewport" tabindex="0" aria-label="Stitched result preview">
-        <div class="canvas-wrap"><canvas id="view" width="1" height="1"></canvas></div>
+      <div class="progress" id="prog" hidden><div></div></div>
+      <div class="viewport" id="viewport" tabindex="0" aria-label="Stitched result">
+        <div class="canvas-wrap"><div class="stack" id="stack"><canvas id="view" width="1" height="1"></canvas><canvas id="overlay"></canvas></div></div>
         <div class="empty" id="empty" hidden>
           <div class="box">
-            <h3>Drop images to start</h3>
-            <p>Drag files anywhere on this page, paste with ⌘V, or choose them from disk. Nothing leaves your computer.</p>
-            <button class="btn primary" id="addEmpty" type="button">Choose images</button>
+            <h3>Drop overlapping photos</h3>
+            <p>They stitch into one image automatically. Drag files anywhere on this page, paste with ⌘V, or pick them from disk. Nothing is uploaded — everything happens in this browser.</p>
+            <div class="row">
+              <button class="btn primary" id="addEmpty" type="button">Choose images</button>
+              <button class="btn" id="sampleBtn" type="button">Load the sample</button>
+            </div>
           </div>
         </div>
+        <div class="toast" id="toast"></div>
       </div>
-      <div class="report" id="report" hidden></div>
+      <details class="report" id="report" hidden><summary>Alignment detail</summary><div class="body" id="reportBody"></div></details>
     </main>
 
     <aside class="side">
       <section>
-        <h2>Images <span class="count" id="count">0</span><span class="grow"></span><button class="btn ghost" id="clearAll" type="button">Clear all</button></h2>
+        <h2>Images <span class="count" id="count">0</span><span class="grow"></span><button class="btn ghost" id="clearAll" type="button">Clear</button></h2>
         <label class="drop" id="drop">
           <input type="file" id="file" accept="image/*,.nef,.nrw,.cr2,.cr3,.arw,.dng,.raf,.orf,.rw2,.pef,.srw" multiple>
-          <strong>Choose images</strong> or drop them here
+          <strong>Choose images</strong><small>or drop them here · ⌘V to paste</small>
         </label>
-        <p class="note sample" id="sampleNote" hidden>These are example images. Add your own and they’ll replace them.</p>
+        <p class="note sample" id="sampleNote" hidden><span>Example images.</span><button class="btn ghost" id="clearSample" type="button">Clear</button></p>
         <ul class="list" id="list"></ul>
-        <p class="hint" id="orderHint">Order sets left-to-right / top-to-bottom placement and which image sits on top.</p>
+        <p class="hint" id="orderHint"></p>
       </section>
 
       <section>
         <h2>Method</h2>
         <div class="seg" role="radiogroup" aria-label="Stitch method">
-          <input type="radio" name="mode" id="m-pano" value="pano"><label for="m-pano">Panorama</label>
+          <input type="radio" name="mode" id="m-pano" value="pano"><label for="m-pano">Auto</label>
           <input type="radio" name="mode" id="m-row" value="row"><label for="m-row">Row</label>
           <input type="radio" name="mode" id="m-col" value="col"><label for="m-col">Column</label>
           <input type="radio" name="mode" id="m-grid" value="grid"><label for="m-grid">Grid</label>
-          <input type="radio" name="mode" id="m-free" value="free"><label for="m-free">Freeform</label>
+          <input type="radio" name="mode" id="m-free" value="free"><label for="m-free">Free</label>
         </div>
+        <p class="hint" id="modeHint"></p>
 
-        <div data-panel="pano" class="stack" style="display:flex;flex-direction:column;gap:10px">
-          <p class="hint">Finds matching detail where shots overlap and aligns them automatically. Order doesn’t matter; neighbours need roughly 20–50% overlap.</p>
-          <div class="field"><label for="o-model">Alignment</label>
-            <select id="o-model" data-opt="model">
-              <option value="perspective">Perspective — handheld photos</option>
-              <option value="similarity">Rotate + scale — flatbed, drone</option>
-              <option value="translation">Shift only — scans, screenshots, tiles</option>
-            </select></div>
-          <div class="field"><label for="o-features">Feature points</label>
-            <select id="o-features" data-opt="features">
-              <option value="1200">1,200 — fast</option>
-              <option value="2500">2,500 — balanced</option>
-              <option value="5000">5,000 — thorough</option>
-            </select></div>
-          <div class="field"><label for="o-exposure">Exposure</label>
-            <select id="o-exposure" data-opt="exposure">
-              <option value="full">Match, de-vignette, smooth</option>
-              <option value="gain">Match brightness only</option>
-              <option value="off">Leave exactly as captured</option>
-            </select></div>
-          <div class="field" id="paintField"><label for="o-paint">Painted-in limit</label>
-            <div class="inline"><input type="range" id="o-paint" data-opt="paint" min="0" max="30" step="1"><output id="paintOut">8%</output></div></div>
-          <div class="field"><label for="o-blend">Seams</label>
-            <select id="o-blend" data-opt="blend">
-              <option value="feather">Feathered blend</option>
-              <option value="hard">Hard edges (list order on top)</option>
-            </select></div>
-          <div class="field"><label for="o-edges">Ragged edges</label>
-            <select id="o-edges" data-opt="edges">
-              <option value="trim">Trim, then paint in the rest</option>
-              <option value="crop">Crop to the filled area</option>
-              <option value="fill">Keep everything, paint in the gaps</option>
-              <option value="keep">Leave them empty</option>
-            </select></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn" id="realign" type="button">Re-run alignment</button>
+        <div class="result" id="resultCard" hidden>
+          <div class="headline"><span class="big" id="resultBig">—</span><span class="sub" id="resultSub"></span></div>
+          <div class="facts" id="resultFacts"></div>
+          <div class="row" id="resultRow">
+            <button class="btn" id="realign" type="button">Re-align</button>
             <button class="btn" id="toFree" type="button" hidden>Fine-tune by hand</button>
           </div>
         </div>
 
-        <div data-panel="row col" style="display:flex;flex-direction:column;gap:10px">
-          <div class="field"><label for="o-match" id="matchLbl">Match heights</label>
-            <select id="o-match" data-opt="match">
-              <option value="min">Scale to smallest</option>
-              <option value="max">Scale to largest</option>
-              <option value="none">Keep original sizes</option>
-            </select></div>
-          <div class="field" id="alignField"><label for="o-align">Align</label>
-            <select id="o-align" data-opt="align">
-              <option value="start">Top</option>
-              <option value="center">Center</option>
-              <option value="end">Bottom</option>
-            </select></div>
-        </div>
+        <details class="tune" id="tune">
+          <summary>Fine-tuning</summary>
+          <div class="body">
+            <div data-panel="pano" style="display:flex;flex-direction:column;gap:10px">
+              <div class="field"><label for="o-exposure">Exposure</label>
+                <select id="o-exposure" data-opt="exposure">
+                  <option value="full">Match, de-vignette, smooth</option>
+                  <option value="gain">Match brightness only</option>
+                  <option value="off">Leave exactly as captured</option>
+                </select></div>
+              <div class="field"><label for="o-edges">Ragged edges</label>
+                <select id="o-edges" data-opt="edges">
+                  <option value="trim">Trim, then paint in the rest</option>
+                  <option value="crop">Crop to real pixels only</option>
+                  <option value="fill">Keep everything, paint the gaps</option>
+                  <option value="keep">Leave them empty</option>
+                </select></div>
+              <div class="field" id="paintField"><label for="o-paint">Painted-in limit</label>
+                <div class="inline"><input type="range" id="o-paint" data-opt="paint" min="0" max="30" step="1"><output id="paintOut">8%</output></div></div>
+              <div class="field"><label for="o-model">Camera motion</label>
+                <select id="o-model" data-opt="model">
+                  <option value="perspective">Handheld — perspective</option>
+                  <option value="similarity">Rotate + scale — flatbed, drone</option>
+                  <option value="translation">Shift only — scans, screenshots, tiles</option>
+                </select></div>
+              <div class="field"><label for="o-blend">Seams</label>
+                <select id="o-blend" data-opt="blend">
+                  <option value="feather">Feathered blend</option>
+                  <option value="hard">Hard edges (list order on top)</option>
+                </select></div>
+              <div class="field"><label for="o-features">Detail searched</label>
+                <select id="o-features" data-opt="features">
+                  <option value="1200">1,200 points — fast</option>
+                  <option value="2500">2,500 points — balanced</option>
+                  <option value="5000">5,000 points — thorough</option>
+                </select></div>
+            </div>
 
-        <div data-panel="grid" style="display:flex;flex-direction:column;gap:10px">
-          <div class="field"><label for="o-cols">Columns</label><input type="number" id="o-cols" data-opt="cols" min="1" max="50" step="1"></div>
-          <div class="field"><label for="o-cellFit">In each cell</label>
-            <select id="o-cellFit" data-opt="cellFit">
-              <option value="none">Original size, centred</option>
-              <option value="contain">Scale to fit</option>
-              <option value="cover">Scale to fill (crops)</option>
-            </select></div>
-          <p class="hint">Cells take the size of the largest image. Same-size tiles line up edge to edge.</p>
-        </div>
+            <div data-panel="row col" style="display:flex;flex-direction:column;gap:10px">
+              <div class="field"><label for="o-match" id="matchLbl">Match heights</label>
+                <select id="o-match" data-opt="match">
+                  <option value="min">Scale to smallest</option>
+                  <option value="max">Scale to largest</option>
+                  <option value="none">Keep original sizes</option>
+                </select></div>
+              <div class="field" id="alignField"><label for="o-align">Align</label>
+                <select id="o-align" data-opt="align">
+                  <option value="start">Top</option><option value="center">Center</option><option value="end">Bottom</option>
+                </select></div>
+            </div>
 
-        <div data-panel="free" style="display:flex;flex-direction:column;gap:10px">
-          <p class="hint">Drag images in the preview to place them. Arrow keys nudge the selected image 1 px (Shift for 10 px).</p>
-          <label class="check"><input type="checkbox" id="o-onion" data-opt="onion"> See-through selected image while aligning</label>
-          <div class="field"><label>Selected</label><div class="inline dims-out" id="freePos">—</div></div>
-        </div>
+            <div data-panel="grid" style="display:flex;flex-direction:column;gap:10px">
+              <div class="field"><label for="o-cols">Columns</label><input type="number" id="o-cols" data-opt="cols" min="1" max="50" step="1"></div>
+              <div class="field"><label for="o-cellFit">In each cell</label>
+                <select id="o-cellFit" data-opt="cellFit">
+                  <option value="none">Original size, centred</option>
+                  <option value="contain">Scale to fit</option>
+                  <option value="cover">Scale to fill (crops)</option>
+                </select></div>
+            </div>
 
-        <div data-panel="row col grid" class="field"><label for="o-gap">Gap</label>
-          <div class="inline"><input type="range" id="o-gap" data-opt="gap" min="0" max="200" step="1"><output id="gapOut">0 px</output></div></div>
-        <div class="field"><label for="o-bg">Background</label>
-          <div class="inline"><input type="color" id="o-bg" data-opt="bg" aria-label="Background colour"><label class="check"><input type="checkbox" id="o-transparent" data-opt="transparent"> Transparent</label></div></div>
+            <div data-panel="free" style="display:flex;flex-direction:column;gap:10px">
+              <label class="check"><input type="checkbox" id="o-onion" data-opt="onion"> See through the selected image</label>
+              <div class="field"><label>Selected</label><div class="inline dims-out" id="freePos">—</div></div>
+            </div>
+
+            <div data-panel="row col grid" class="field"><label for="o-gap">Gap</label>
+              <div class="inline"><input type="range" id="o-gap" data-opt="gap" min="0" max="200" step="1"><output id="gapOut">0 px</output></div></div>
+            <div class="field"><label for="o-bg">Background</label>
+              <div class="inline"><input type="color" id="o-bg" data-opt="bg" aria-label="Background colour"><label class="check"><input type="checkbox" id="o-transparent" data-opt="transparent"> Transparent</label></div></div>
+          </div>
+        </details>
       </section>
 
       <section>
@@ -291,9 +365,7 @@ input[type=color]{width:34px;height:26px;padding:0 2px;border:1px solid var(--li
         <div class="field"><label for="o-scale">Size</label>
           <select id="o-scale" data-opt="scale">
             <option value="1">100% — full resolution</option>
-            <option value="0.75">75%</option>
-            <option value="0.5">50%</option>
-            <option value="0.25">25%</option>
+            <option value="0.75">75%</option><option value="0.5">50%</option><option value="0.25">25%</option>
           </select></div>
         <div class="field"><label for="o-name">File name</label><input type="text" id="o-name" data-opt="name" spellcheck="false"></div>
         <p class="dims-out" id="exportInfo">—</p>
@@ -302,6 +374,24 @@ input[type=color]{width:34px;height:26px;padding:0 2px;border:1px solid var(--li
     </aside>
   </div>
 </div>
+
+<dialog id="help">
+  <div class="hd"><span class="grow">Keyboard shortcuts</span><button class="btn ghost" id="helpClose" type="button">Close</button></div>
+  <div class="bd">
+    <div class="sect">Viewing</div>
+    <kbd>+</kbd><span>Zoom in</span>
+    <kbd>−</kbd><span>Zoom out</span>
+    <kbd>0</kbd><span>Fit to window</span>
+    <kbd>1</kbd><span>Actual pixels</span>
+    <kbd>C</kbd><span>Hold to see the original exposures</span>
+    <kbd>drag</kbd><span>Pan · ⌘/Ctrl + scroll to zoom</span>
+    <div class="sect">Working</div>
+    <kbd>⌘V</kbd><span>Paste images</span>
+    <kbd>D</kbd><span>Download</span>
+    <kbd>↑ ↓ ← →</kbd><span>Nudge the selected image (Free mode; Shift for 10 px)</span>
+    <kbd>?</kbd><span>This list</span>
+  </div>
+</dialog>
 
 <script>
 'use strict';
@@ -316,10 +406,12 @@ const nf = n => Math.round(n).toLocaleString('en-US');
 let uid = 0;
 
 const S = {
-  items: [], mode: 'pano', sel: null, sample: false, zoom: null,
+  items: [], mode: 'pano', sel: null, hover: null, sample: false, zoom: null, painted: 0,
   pano: null, panoErr: null, panoBusy: false, view: null,
   opt: { gap: 0, bg: '#ffffff', transparent: false, match: 'min', align: 'center', cols: 3, cellFit: 'none',
-         model: 'perspective', features: 2500, blend: 'feather', edges: 'trim', paint: 8, onion: true, exposure: 'full',
+         model: 'perspective', features: 2500, blend: 'feather', edges: 'trim', paint: 8, onion: true,
+         // debugging switches: turn individual photometric stages off to measure their effect
+         noVig: false, noField: false, exposure: 'full',
          format: 'image/png', quality: 0.92, scale: 1, name: defaultName() }
 };
 
@@ -329,7 +421,23 @@ function defaultName() {
 }
 function setStatus(text, kind = '') {
   const el = $('#status'); el.textContent = text || ''; el.className = 'status' + (kind ? ' ' + kind : '');
+  if (kind !== 'busy') progress(null);
 }
+// frac: 0–1 for a known amount of work, -1 when the length isn't known, null to hide.
+function progress(frac, text) {
+  const bar = $('#prog');
+  if (frac == null) { bar.hidden = true; bar.classList.remove('indet'); return; }
+  bar.hidden = false;
+  if (frac < 0) { bar.classList.add('indet'); bar.firstElementChild.style.width = ''; }
+  else { bar.classList.remove('indet'); bar.firstElementChild.style.width = Math.max(2, frac * 100) + '%'; }
+  if (text) { const el = $('#status'); el.textContent = text; el.className = 'status busy'; }
+}
+let toastTimer = 0;
+function toast(msg) {
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 4200);
+}
+const accentColor = () => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#A81E5A';
 function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
@@ -521,7 +629,14 @@ function clearItems() {
 
 function itemsChanged() {
   invalidatePano();
-  renderList(); schedule(0);
+  renderList(); schedule(0); updateTopHint();
+}
+function updateTopHint() {
+  const n = S.items.length;
+  $('#topHint').textContent = !n ? 'Drop overlapping photos anywhere — they stitch automatically.'
+    : S.sample ? 'This is an example. Drop your own photos to replace it.'
+    : n === 1 ? 'Add more overlapping shots, or pick a layout below.'
+    : 'Review the result, then download it.';
 }
 
 function placeFreeDefaults() {
@@ -535,8 +650,9 @@ function renderList() {
   const ul = $('#list'); ul.innerHTML = '';
   $('#count').textContent = S.items.length;
   $('#sampleNote').hidden = !S.sample;
+  $('#orderHint').hidden = S.items.length < 2;
   $('#empty').hidden = S.items.length > 0;
-  $('#view').hidden = S.items.length === 0;
+  $('#stack').hidden = S.items.length === 0;
   const P = S.mode === 'pano' ? S.pano : null;
   S.items.forEach((it, i) => {
     const li = document.createElement('li');
@@ -544,6 +660,8 @@ function renderList() {
     let badge = '';
     if (P) badge = !P.placed.has(it.id) ? '<span class="pill bad">no match</span>'
       : P.refId === it.id ? '<span class="pill ref">anchor</span>' : '<span class="pill ok">placed</span>';
+    li.addEventListener('mouseenter', () => { S.hover = it.id; drawOverlay(); });
+    li.addEventListener('mouseleave', () => { if (S.hover === it.id) { S.hover = null; drawOverlay(); } });
     li.innerHTML = `<img alt="" src="${it.thumb}"><div class="meta"><div class="name" title="${esc(it.name)}">${esc(it.name)}</div>
       <div class="dims">${nf(it.w)} × ${nf(it.h)} ${it.raw ? `<span class="pill raw" title="Using the camera’s embedded JPEG preview">RAW</span>` : ''}${badge}</div></div>
       <div class="acts"><button class="btn ghost icon" data-a="up" aria-label="Move ${esc(it.name)} up" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn ghost icon" data-a="down" aria-label="Move ${esc(it.name)} down" ${i === S.items.length - 1 ? 'disabled' : ''}>↓</button><button class="btn ghost icon" data-a="rm" aria-label="Remove ${esc(it.name)}">×</button></div>`;
@@ -558,7 +676,8 @@ function renderList() {
         if (!S.items.length) S.sample = false;
         itemsChanged(); return;
       }
-      S.sel = S.sel === it.id ? null : it.id; renderList(); updateFreePos(); if (S.mode === 'free') schedule(0);
+      S.sel = S.sel === it.id ? null : it.id; renderList(); updateFreePos(); drawOverlay();
+      if (S.mode === 'free') schedule(0);
     });
     ul.appendChild(li);
   });
@@ -604,13 +723,19 @@ function modeUI() {
   const col = S.mode === 'col';
   $('#matchLbl').textContent = col ? 'Match widths' : 'Match heights';
   const o = $('#o-align').options; o[0].text = col ? 'Left' : 'Top'; o[2].text = col ? 'Right' : 'Bottom';
-  $('#view').classList.toggle('free', S.mode === 'free');
-  $('#viewport').classList.toggle('pan', S.mode !== 'free');
   $('#orderHint').textContent = {
-    pano: 'Order doesn’t affect alignment. With hard edges, later images sit on top.',
-    row: 'Order sets left-to-right placement.', col: 'Order sets top-to-bottom placement.',
-    grid: 'Order fills the grid left to right, then down.', free: 'Later images sit on top. Click one to select it.'
+    pano: 'Order doesn’t affect alignment.', row: 'Order sets left-to-right placement.',
+    col: 'Order sets top-to-bottom placement.', grid: 'Order fills left to right, then down.',
+    free: 'Later images sit on top. Click one to select it.'
   }[S.mode];
+  $('#modeHint').textContent = {
+    pano: 'Finds where your shots overlap and lines them up. Any order, any number of rows.',
+    row: 'Side by side, left to right.', col: 'Stacked, top to bottom.',
+    grid: 'Laid out in a grid — same-size tiles meet exactly.',
+    free: 'Drag images in the preview to place them yourself.'
+  }[S.mode];
+  $('#stack').classList.toggle('free', S.mode === 'free');
+  $('#viewport').classList.toggle('pan', S.mode !== 'free');
   renderReport();
 }
 
@@ -862,13 +987,13 @@ async function alignPano() {
   const tok = ++alignToken, items = S.items.slice();
   S.panoBusy = true; S.panoErr = null; renderReport();
   try {
-    if (!window.cv?.Mat) setStatus('Loading the alignment engine (≈10 MB, first run only)…', 'busy');
+    if (!window.cv?.Mat) progress(-1, 'Loading the alignment engine (≈10 MB, first run only)…');
     const { cv } = await loadCV(); if (tok !== alignToken) return;
     const n = S.opt.features, model = S.opt.model;
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       if (it.feat && it.feat.nf === n) continue;
-      setStatus(`Finding features in image ${i + 1} of ${items.length}…`, 'busy'); await tick();
+      progress(0.05 + 0.25 * (i / items.length), `Looking for detail in image ${i + 1} of ${items.length}…`); await tick();
       if (tok !== alignToken) return;
       it.feat?.des.delete(); it.feat = detect(cv, it, n);
     }
@@ -876,12 +1001,13 @@ async function alignPano() {
     const edges = [];
     for (let p = 0; p < pairs.length; p++) {
       const [i, j] = pairs[p];
-      setStatus(`Matching pair ${p + 1} of ${pairs.length}…`, 'busy'); await tick();
+      progress(0.3 + 0.65 * (p / pairs.length), `Matching overlaps — pair ${p + 1} of ${pairs.length}…`); await tick();
       if (tok !== alignToken) return;
       const r = matchPair(cv, items[i], items[j], model); r.i = i; r.j = j;
       if (r.ok) edges.push(r);
     }
     S.pano = buildTree(items, edges);
+    S.announce = true;
     setStatus('');
   } catch (e) {
     if (tok !== alignToken) return;
@@ -943,46 +1069,130 @@ function boxBlur(a, W, H, ch, r, passes = 2) {
   return src;
 }
 
-// Squared distance from the image centre, normalised to 1 at the corners.
-function radiusMat(cv, w, h) {
-  const n = 64, a = new Float32Array(n * n), r2 = (w * w + h * h) / 4;
+// Position within the frame, as (x, y) in [-1, 1] from the centre. Two channels so a single warp
+// carries both into panorama space.
+function frameCoordMat(cv, w, h) {
+  const n = 64, a = new Float32Array(n * n * 2);
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-    const dx = (x + .5) / n * w - w / 2, dy = (y + .5) / n * h - h / 2;
-    a[y * n + x] = (dx * dx + dy * dy) / r2;
+    a[(y * n + x) * 2] = ((x + .5) / n) * 2 - 1;
+    a[(y * n + x) * 2 + 1] = ((y + .5) / n) * 2 - 1;
   }
-  return cv.matFromArray(n, n, cv.CV_32FC1, a);
+  return cv.matFromArray(n, n, cv.CV_32FC2, a);
 }
+// Shading basis, ordered so the first term is plain radial falloff — what a lens actually does —
+// and the rest describe departures from it: a one-sided gradient, an oval, a tilt.
+//
+// The split matters because of what the data can and cannot see. Frames shot in a single row only
+// ever overlap side by side, so the same scene point appears at different x in the two frames but
+// at the SAME y: nothing in the measurements constrains how brightness varies vertically. Fit the
+// vertical term freely and it comes back arbitrary — in testing, with the wrong sign, inverting the
+// correction. The asymmetric terms are therefore heavily penalised and only move when the overlaps
+// genuinely show something the radial term cannot explain.
+const shadeBasis = (x, y) => [(x * x + y * y) / 2, x, y, x * x - y * y, x * y];
+const NSHADE = 5;
+const SHADE_PRIOR = [0.02, 0.5, 0.5, 0.7, 0.7];   // per-term prior strength; radial is the free one
+const shadeGain = (coef, x, y) => {
+  const b = shadeBasis(x, y);
+  let e = 0;
+  for (let i = 0; i < NSHADE; i++) e += coef[i] * b[i];
+  return Math.max(0.35, Math.min(2.6, Math.exp(-e)));
+};
 
-// Lens falloff: where two frames overlap, the same scene point sits at different distances from
-// each frame's centre. Solved in log space as one falloff curve for the set (same lens) plus a
-// per-image exposure term, which is what links a frame's dark edge to its own bright middle.
-function solveVignette(L, W, H) {
-  const N = L.length, n = N + 2, out = { k: [[], [], []], c1: [0, 0, 0], c2: [0, 0, 0] };
-  for (let c = 0; c < 3; c++) {
-    const ATA = new Float64Array(n * n), ATy = new Float64Array(n);
-    let rows = 0;
-    for (let q = 0; q < W * H; q += 2) {
-      let a = -1, b = -1;
-      for (let i = 0; i < N; i++) if (L[i].wt[q] > 0) { if (a < 0) a = i; else { b = i; break; } }
-      if (b < 0) continue;
+// Uneven shading across the frame — lens vignetting, a graduated filter, light falling off to one
+// side. Where two frames overlap, the same scene point sits at different places within each frame,
+// which is what makes this separable from the scene itself. Solved in log space as one shading
+// field shared by the set (same lens, same filter) plus a per-frame exposure term.
+//
+// The fit is checked before it is trusted: half the overlap samples train it, the other half judge
+// it against a plain per-frame-exposure model. Real shading generalises to the half it never saw;
+// scene structure that merely resembles it does not, and is dropped. Skipping this check lets a
+// confident-looking fit leave a panorama worse than it found it.
+function solveShading(L, W, H) {
+  const N = L.length, out = { k: [[], [], []], coef: [null, null, null], applied: false };
+  for (let c = 0; c < 3; c++) for (let i = 0; i < N; i++) out.k[c][i] = 0;
+  const CAP = 24000, rows = [[], [], []];
+  for (let q = 0; q < W * H; q += 2) {
+    let a = -1, b = -1;
+    for (let i = 0; i < N; i++) if (L[i].wt[q] > 0) { if (a < 0) a = i; else { b = i; break; } }
+    if (b < 0) continue;
+    const ba = shadeBasis(L[a].fx[q], L[a].fy[q]), bb = shadeBasis(L[b].fx[q], L[b].fy[q]);
+    for (let c = 0; c < 3; c++) {
       const vi = L[a].rgb[q * 3 + c], vj = L[b].rgb[q * 3 + c];
-      if (vi < 15 || vi > 242 || vj < 15 || vj > 242) continue;   // skip clipped pixels
-      const ui = L[a].u[q], uj = L[b].u[q];
-      addRow(ATA, ATy, n, [[a, 1], [b, -1], [N, ui - uj], [N + 1, ui * ui - uj * uj]], Math.log(vi) - Math.log(vj), 1);
-      rows++;
+      if (vi < 0.003 || vi > 0.9 || vj < 0.003 || vj > 0.9) continue;
+      if (rows[c].length < CAP) rows[c].push([a, b, ba, bb, Math.log(vi) - Math.log(vj)]);
     }
-    if (rows < 200) { for (let i = 0; i < N; i++) out.k[c][i] = 0; continue; }
-    const w = Math.sqrt(rows) / 3;
-    for (let i = 0; i < N; i++) addRow(ATA, ATy, n, [[i, 1]], 0, w * 0.18);
-    addRow(ATA, ATy, n, [[N, 1]], 0, w * 0.08); addRow(ATA, ATy, n, [[N + 1, 1]], 0, w * 0.08);
-    const x = solveLinear(ATA, ATy, n);
-    for (let i = 0; i < N; i++) out.k[c][i] = x ? x[i] : 0;
-    out.c1[c] = x ? x[N] : 0; out.c2[c] = x ? x[N + 1] : 0;
   }
+  if (rows[0].length < 600) return out;
+
+  const fit = (r, full) => {
+    const n = N + (full ? NSHADE : 0), ATA = new Float64Array(n * n), ATy = new Float64Array(n);
+    let used = 0;
+    for (let t = 0; t < r.length; t += 2) {
+      const [a, b, ba, bb, d] = r[t];
+      const terms = [[a, 1], [b, -1]];
+      if (full) for (let i = 0; i < NSHADE; i++) terms.push([N + i, ba[i] - bb[i]]);
+      addRow(ATA, ATy, n, terms, d, 1); used++;
+    }
+    if (used < 150) return null;
+    const w = Math.sqrt(used) / 3;
+    for (let i = 0; i < N; i++) addRow(ATA, ATy, n, [[i, 1]], 0, w * 0.18);
+    if (full) for (let i = 0; i < NSHADE; i++) addRow(ATA, ATy, n, [[N + i, 1]], 0, w * SHADE_PRIOR[i]);
+    const x = solveLinear(ATA, ATy, n);
+    if (!x) return null;
+    return { k: Array.from(x.slice(0, N)), coef: full ? Array.from(x.slice(N, N + NSHADE)) : null };
+  };
+  const score = (r, m) => {                       // mean squared residual on the untouched half
+    let sum = 0, n = 0;
+    for (let t = 1; t < r.length; t += 2) {
+      const [a, b, ba, bb, d] = r[t];
+      let e = d - (m.k[a] - m.k[b]);
+      if (m.coef) for (let i = 0; i < NSHADE; i++) e -= m.coef[i] * (ba[i] - bb[i]);
+      sum += e * e; n++;
+    }
+    return n ? sum / n : Infinity;
+  };
+
+  const models = [];
+  let wins = 0;
+  for (let c = 0; c < 3; c++) {
+    const full = fit(rows[c], true), plain = fit(rows[c], false);
+    if (!full || !plain) { models.push(plain); continue; }
+    if (score(rows[c], full) < score(rows[c], plain) * 0.95) { wins++; models.push(full); }
+    else models.push(plain);
+  }
+  const apply = wins >= 2;                        // a lens does not shade one channel only
+  for (let c = 0; c < 3; c++) {
+    const m = models[c]; if (!m) continue;
+    for (let i = 0; i < N; i++) out.k[c][i] = m.k[i];
+    if (apply && m.coef) out.coef[c] = m.coef;
+  }
+  out.applied = apply && out.coef.every(Boolean);
   return out;
 }
-const VL = 1024, VU = 2.5, VS = (VL - 1) / VU;
-const vigGainUnused = (v, c, u) => Math.max(0.5, Math.min(1.9, Math.exp(-(v.k[c][v._i] + v.c1[c] * u + v.c2[c] * u * u))));
+
+
+// Exposure differences are multiplicative in light, not in the gamma-encoded numbers a JPEG
+// stores. Matching gains on encoded values can line up the mid-tones and still leave the sky
+// visibly stepped, because the camera's tone curve compresses highlights. Everything photometric
+// therefore happens in linear light, with these tables doing the conversion.
+const SRGB_TO_LIN = (() => {
+  const t = new Float32Array(256);
+  for (let i = 0; i < 256; i++) { const v = i / 255; t[i] = v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+  return t;
+})();
+const LIN_STEPS = 4096, LIN_MAX = 1.25;
+const LIN_TO_SRGB = (() => {
+  const t = new Float32Array(LIN_STEPS);
+  for (let i = 0; i < LIN_STEPS; i++) {
+    const v = Math.min(1, i * LIN_MAX / (LIN_STEPS - 1));
+    t[i] = 255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055);
+  }
+  return t;
+})();
+const toSrgb = lin => {
+  let i = (lin * (LIN_STEPS - 1) / LIN_MAX + 0.5) | 0;
+  return LIN_TO_SRGB[i < 0 ? 0 : i >= LIN_STEPS ? LIN_STEPS - 1 : i];
+};
 
 function buildPhotometric(cv, mode) {
   const P = S.pano, bb = P.bbox, items = S.items.filter(it => P.placed.has(it.id)), N = items.length;
@@ -997,19 +1207,22 @@ function buildPhotometric(cv, mode) {
     const wm = weightMat(cv, it.proxy.width, it.proxy.height), wd = new cv.Mat();
     const M2 = cv.matFromArray(3, 3, cv.CV_64F, mul(M, S3(it.proxy.width / wm.cols, it.proxy.height / wm.rows)));
     cv.warpPerspective(wm, wd, M2, new cv.Size(W, H), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0));
-    const rm = radiusMat(cv, it.proxy.width, it.proxy.height), rd = new cv.Mat();
+    const rm = frameCoordMat(cv, it.proxy.width, it.proxy.height), rd = new cv.Mat();
     const M3 = cv.matFromArray(3, 3, cv.CV_64F, mul(M, S3(it.proxy.width / rm.cols, it.proxy.height / rm.rows)));
-    cv.warpPerspective(rm, rd, M3, new cv.Size(W, H), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0));
-    const rdata = rd.data32F, u = new Float32Array(W * H);
+    cv.warpPerspective(rm, rd, M3, new cv.Size(W, H), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0, 0));
+    const rdata = rd.data32F, fx = new Float32Array(W * H), fy = new Float32Array(W * H);
     const d = dst.data, w8 = wd.data, rgb = new Float32Array(W * H * 3), wt = new Float32Array(W * H);
     for (let q = 0; q < W * H; q++) {
       const a = d[q * 4 + 3]; if (a < 250) continue;            // ignore the soft warp edge
       const inv = 255 / a;
-      rgb[q * 3] = d[q * 4] * inv; rgb[q * 3 + 1] = d[q * 4 + 1] * inv; rgb[q * 3 + 2] = d[q * 4 + 2] * inv;
-      wt[q] = Math.max(1e-3, w8[q] * a / 255); u[q] = rdata[q];
+      for (let c = 0; c < 3; c++) {
+        const v = d[q * 4 + c] * inv;
+        rgb[q * 3 + c] = SRGB_TO_LIN[v < 0 ? 0 : v > 255 ? 255 : v | 0];
+      }
+      wt[q] = Math.max(1e-3, w8[q] * a / 255); fx[q] = rdata[q * 2]; fy[q] = rdata[q * 2 + 1];
     }
     src.delete(); dst.delete(); M1.delete(); M2.delete(); M3.delete(); wm.delete(); wd.delete(); rm.delete(); rd.delete();
-    L.push({ it, rgb, wt, u });
+    L.push({ it, rgb, wt, fx, fy, rgb0: Float32Array.from(rgb) });
   }
   // The pair constraints below only fix images *relative* to each other: scaling every gain and
   // offset together satisfies them equally well, so the solution can drift (usually darker). Keep
@@ -1020,7 +1233,7 @@ function buildPhotometric(cv, mode) {
   const anchorStats = (uMax) => {
     let n = 0, s = 0, q = 0;
     for (const l of L) for (let i = 0; i < W * H; i++) {
-      if (!l.wt[i] || l.u[i] > uMax) continue;
+      if (!l.wt[i] || l.fx[i] * l.fx[i] + l.fy[i] * l.fy[i] > uMax) continue;
       const v = (l.rgb[i * 3] + l.rgb[i * 3 + 1] + l.rgb[i * 3 + 2]) / 3;
       n++; s += v; q += v * v;
     }
@@ -1029,54 +1242,88 @@ function buildPhotometric(cv, mode) {
   let anchorU = 0.25, a0 = anchorStats(anchorU);
   if (a0.n < 500) { anchorU = 1e9; a0 = anchorStats(anchorU); }   // tiny overlaps: use everything
   let n0 = a0.n, s0 = a0.s, q0 = a0.q;
-  // stage 1 — pairwise overlap statistics
-  const stats = new Map(), cov = new Int32Array(N);
-  for (let q = 0; q < W * H; q++) {
-    let m = 0; for (let i = 0; i < N; i++) if (L[i].wt[q] > 0) cov[m++] = i;
-    if (m < 2) continue;
-    for (let a = 0; a < m; a++) for (let b = a + 1; b < m; b++) {
-      const i = cov[a], j = cov[b], key = i * N + j;
-      let st = stats.get(key);
-      if (!st) { st = { n: 0, si: new Float64Array(3), sj: new Float64Array(3), si2: new Float64Array(3), sj2: new Float64Array(3) }; stats.set(key, st); }
-      st.n++;
-      for (let c = 0; c < 3; c++) {
-        const vi = L[i].rgb[q * 3 + c], vj = L[j].rgb[q * 3 + c];
-        st.si[c] += vi; st.sj[c] += vj; st.si2[c] += vi * vi; st.sj2[c] += vj * vj;
+  const gains = [[], [], []], offs = [[], [], []];
+  // Per-frame exposure, solved as log gains. Writing it multiplicatively matters: an equation that
+  // matched gain·mean + offset between frames would be satisfied just as well by shrinking every
+  // gain toward zero, and with enough overlapping pairs outvoting the priors that is exactly what
+  // the solver does — every frame pinned at the minimum gain and the whole panorama washed out.
+  // In log space only differences between frames appear, so the one remaining degree of freedom is
+  // a constant shift that the prior pins cleanly.
+  const doExposure = () => {
+    const stats = new Map(), cov = new Int32Array(N);
+    for (let q = 0; q < W * H; q++) {
+      let m = 0; for (let i = 0; i < N; i++) if (L[i].wt[q] > 0) cov[m++] = i;
+      if (m < 2) continue;
+      for (let a = 0; a < m; a++) for (let b = a + 1; b < m; b++) {
+        const i = cov[a], j = cov[b], key = i * N + j;
+        let st = stats.get(key);
+        if (!st) { st = { n: new Float64Array(3), si: new Float64Array(3), sj: new Float64Array(3) }; stats.set(key, st); }
+        for (let c = 0; c < 3; c++) {
+          const vi = L[i].rgb[q * 3 + c], vj = L[j].rgb[q * 3 + c];
+          // Skip anything near black or white. A frame whose sky is already close to clipping has
+          // no headroom left: matching means on those pixels would tell the solver to brighten it
+          // further, and the sky would blow out instead of matching.
+          if (vi < 0.002 || vi > 0.86 || vj < 0.002 || vj > 0.86) continue;   // skip near-black and near-clipped
+          st.n[c]++; st.si[c] += vi; st.sj[c] += vj;
+        }
       }
     }
-  }
-  // per channel: solve for gain + offset per image, with a prior keeping them near "no change"
-  const gains = [[], [], []], offs = [[], [], []];
-  for (let c = 0; c < 3; c++) {
-    const n2 = 2 * N, ATA = new Float64Array(n2 * n2), ATy = new Float64Array(n2);
-    for (const [key, st] of stats) {
-      if (st.n < 40) continue;
-      const i = Math.floor(key / N), j = key % N;
-      const mi = st.si[c] / st.n, mj = st.sj[c] / st.n;
-      const sdi = Math.sqrt(Math.max(1, st.si2[c] / st.n - mi * mi)), sdj = Math.sqrt(Math.max(1, st.sj2[c] / st.n - mj * mj));
-      const w = Math.sqrt(st.n) / 6;
-      addRow(ATA, ATy, n2, [[2 * i, mi], [2 * i + 1, 1], [2 * j, -mj], [2 * j + 1, -1]], 0, w);
-      addRow(ATA, ATy, n2, [[2 * i, sdi], [2 * j, -sdj]], 0, w * 0.4);
+    for (let c = 0; c < 3; c++) {
+      const ATA = new Float64Array(N * N), ATy = new Float64Array(N);
+      let pairs = 0;
+      for (const [key, st] of stats) {
+        if (st.n[c] < 40) continue;
+        const i = Math.floor(key / N), j = key % N;
+        const mi = Math.max(1e-4, st.si[c] / st.n[c]), mj = Math.max(1e-4, st.sj[c] / st.n[c]);
+        const w = Math.sqrt(st.n[c]) / 6;
+        addRow(ATA, ATy, N, [[i, 1], [j, -1]], Math.log(mj) - Math.log(mi), w);
+        pairs++;
+      }
+      for (let i = 0; i < N; i++) addRow(ATA, ATy, N, [[i, 1]], 0, pairs ? 1 / 0.25 : 1e3);
+      const x = solveLinear(ATA, ATy, N);
+      for (let i = 0; i < N; i++) {
+        const g = x ? Math.exp(x[i]) : 1;
+        gains[c][i] = Number.isFinite(g) ? Math.min(2.2, Math.max(0.45, g)) : 1;
+        offs[c][i] = 0;
+      }
     }
-    for (let i = 0; i < N; i++) { addRow(ATA, ATy, n2, [[2 * i, 1]], 1, 1 / 0.12); addRow(ATA, ATy, n2, [[2 * i + 1, 1]], 0, 1 / 8); }
-    const x = solveLinear(ATA, ATy, n2);
-    for (let i = 0; i < N; i++) {
-      gains[c][i] = x ? Math.min(1.8, Math.max(0.55, x[2 * i])) : 1;
-      offs[c][i] = x ? Math.min(60, Math.max(-60, x[2 * i + 1])) : 0;
-    }
-  }
-  for (let i = 0; i < N; i++) for (let q = 0; q < W * H; q++) {
-    if (!L[i].wt[q]) continue;
-    for (let c = 0; c < 3; c++) L[i].rgb[q * 3 + c] = gains[c][i] * L[i].rgb[q * 3 + c] + offs[c][i];
-  }
-  // stage 2 — lens falloff: one curve for the set plus a per-image exposure term
-  let vig = null;
-  if (mode === 'full' && N > 1) {
-    vig = solveVignette(L, W, H);
     for (let i = 0; i < N; i++) for (let q = 0; q < W * H; q++) {
       if (!L[i].wt[q]) continue;
-      const u = L[i].u[q];
-      for (let c = 0; c < 3; c++) L[i].rgb[q * 3 + c] *= Math.max(0.5, Math.min(1.9, Math.exp(-(vig.k[c][i] + vig.c1[c] * u + vig.c2[c] * u * u))));
+      for (let c = 0; c < 3; c++) L[i].rgb[q * 3 + c] *= gains[c][i];
+    }
+  };
+
+  let vig = null;
+  // Stage order is measurable, not obvious: matching brightness first keeps the lens fit clean on
+  // synthetic input, but on real frames the falloff must come out before the gains are fitted, or
+  // the gain solve partly absorbs the vignette and the sky is left uneven.
+  doExposure();
+  // Try the shading stage against the state without it and keep whichever reads flatter. Uneven
+  // shading is real and worth removing when it is there, but a fit that latches onto scene
+  // structure leaves a worse panorama than no correction at all.
+  let shadeVerdict = 'not needed';
+  if (mode === 'full' && N > 1 && !S.opt.noVig) {
+    const cand = solveShading(L, W, H);
+    // Sanity bound as well as the held-out check: even heavy vignetting leaves well over a third
+    // of the light in a corner, so a fit claiming more than that is fitting something else.
+    let extreme = false;
+    if (cand.applied) for (let c = 0; c < 3; c++) {
+      if (!cand.coef[c]) continue;
+      for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1]])
+        if (shadeGain(cand.coef[c], x, y) > 2.4 || shadeGain(cand.coef[c], x, y) < 0.45) extreme = true;
+    }
+    if (cand.applied && !extreme) {
+      vig = cand;
+      for (let i = 0; i < N; i++) for (let q = 0; q < W * H; q++) {
+        if (!L[i].wt[q]) continue;
+        for (let c = 0; c < 3; c++)
+          L[i].rgb[q * 3 + c] *= (cand.coef[c] ? shadeGain(cand.coef[c], L[i].fx[q], L[i].fy[q]) : 1) * Math.exp(-cand.k[c][i]);
+      }
+      shadeVerdict = 'removed';
+    } else if (extreme) {
+      shadeVerdict = 'ignored — the fit was implausibly strong';
+    } else {
+      shadeVerdict = 'none found';
     }
   }
   // undo the drift: one global affine that puts the set's mean and spread back where they started
@@ -1084,10 +1331,12 @@ function buildPhotometric(cv, mode) {
   if (n0 > 100) {
     const a1 = anchorStats(anchorU);
     const n1 = a1.n, s1 = a1.s, q1 = a1.q;
-    const m0 = s0 / n0, sd0 = Math.sqrt(Math.max(1, q0 / n0 - m0 * m0));
-    const m1 = s1 / n1, sd1 = Math.sqrt(Math.max(1, q1 / n1 - m1 * m1));
-    alpha = Math.max(0.75, Math.min(1.35, sd0 / sd1));
-    beta = Math.max(-40, Math.min(40, m0 - alpha * m1));
+    const m0 = s0 / n0, sd0 = Math.sqrt(Math.max(1e-6, q0 / n0 - m0 * m0));
+    const m1 = s1 / n1, sd1 = Math.sqrt(Math.max(1e-6, q1 / n1 - m1 * m1));
+    // Match the mean, and allow only a slight correction of spread. Forcing the spread back to
+    // where it started lets a big contrast stretch through, which amplifies any banding left over.
+    alpha = Math.max(0.94, Math.min(1.06, sd0 / sd1));
+    beta = Math.max(-0.08, Math.min(0.08, m0 - alpha * m1));
     for (const l of L) for (let q = 0; q < W * H; q++) {
       if (!l.wt[q]) continue;
       for (let c = 0; c < 3; c++) l.rgb[q * 3 + c] = alpha * l.rgb[q * 3 + c] + beta;
@@ -1096,7 +1345,7 @@ function buildPhotometric(cv, mode) {
   // stage 3 — low-frequency correction: pull each frame gently toward the local blend
   const corr = new Map(), summary = [];
   let fields = null;
-  if (mode === 'full') {
+  if (mode === 'full' && !S.opt.noField) {
     const R = new Float32Array(W * H * 3), WS = new Float32Array(W * H);
     for (const l of L) for (let q = 0; q < W * H; q++) { const w = l.wt[q]; if (!w) continue; WS[q] += w; for (let c = 0; c < 3; c++) R[q * 3 + c] += w * l.rgb[q * 3 + c]; }
     for (let q = 0; q < W * H; q++) if (WS[q]) for (let c = 0; c < 3; c++) R[q * 3 + c] /= WS[q];
@@ -1111,7 +1360,7 @@ function buildPhotometric(cv, mode) {
       const Db = boxBlur(D, W, H, 3, r), Mb = boxBlur(M, W, H, 1, r), F = new Float32Array(W * H * 3);
       for (let q = 0; q < W * H; q++) {
         const m = Mb[q];
-        if (m > 1e-4) for (let c = 0; c < 3; c++) F[q * 3 + c] = Math.max(-45, Math.min(45, Db[q * 3 + c] / m));
+        if (m > 1e-4) for (let c = 0; c < 3; c++) F[q * 3 + c] = Math.max(-0.15, Math.min(0.15, Db[q * 3 + c] / m));
       }
       fields.set(l.it.id, F);
     }
@@ -1119,13 +1368,23 @@ function buildPhotometric(cv, mode) {
   items.forEach((it, i) => {
     const g = [gains[0][i], gains[1][i], gains[2][i]], b = [offs[0][i], offs[1][i], offs[2][i]];
     corr.set(it.id, { g, b, field: fields?.get(it.id) || null,
-      vig: vig ? { k: [vig.k[0][i], vig.k[1][i], vig.k[2][i]], c1: vig.c1, c2: vig.c2 } : null });
+      shade: vig ? { k: [vig.k[0][i], vig.k[1][i], vig.k[2][i]], coef: vig.coef } : null });
     const vg = vig ? Math.exp(-(vig.k[0][i] + vig.k[1][i] + vig.k[2][i]) / 3) : 1;
-    const mid = (alpha * (g.reduce((s, v) => s + v, 0) / 3 * 128 + b.reduce((s, v) => s + v, 0) / 3) * vg + beta) / 128 - 1;
+    const midLin = SRGB_TO_LIN[128], gAvg = g.reduce((s, v) => s + v, 0) / 3;
+    const mid = toSrgb(alpha * midLin * gAvg * vg + beta) / 128 - 1;
     summary.push({ name: it.name, pct: mid * 100 });
   });
-  const falloff = vig ? (1 - Math.exp(vig.c1.reduce((s, v) => s + v, 0) / 3 + vig.c2.reduce((s, v) => s + v, 0) / 3)) * 100 : 0;
-  return { corr, W, H, kl, summary, mode, falloff, alpha, beta };
+  // how much darker the frame edges were than the middle, averaged over the four corners
+  let falloff = 0;
+  if (vig?.applied) {
+    let sum = 0, n = 0;
+    for (let c = 0; c < 3; c++) {
+      if (!vig.coef[c]) continue;
+      for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { sum += 1 - 1 / shadeGain(vig.coef[c], x, y); n++; }
+    }
+    falloff = n ? sum / n * 100 : 0;
+  }
+  return { corr, W, H, kl, summary, mode, falloff, alpha, beta, shadeVerdict };
 }
 
 function panoSize() { const b = S.pano.bbox; return { W: b.x1 - b.x0, H: b.y1 - b.y0 }; }
@@ -1133,12 +1392,14 @@ function panoSize() { const b = S.pano.bbox; return { W: b.x1 - b.x0, H: b.y1 - 
 async function renderPano(k, preview, onProgress) {
   const cv = window.cv, P = S.pano, b = P.bbox, feather = S.opt.blend === 'feather';
   if (S.opt.exposure !== 'off' && P.photoMode !== S.opt.exposure) {
-    setStatus('Matching exposure across the overlaps…', 'busy'); await tick();
+    progress(-1, 'Matching exposure across the overlaps…'); await tick();
     P.photo = buildPhotometric(cv, S.opt.exposure); P.photoMode = S.opt.exposure; renderReport();
   }
   const photo = S.opt.exposure === 'off' ? null : P.photo;
   const W = Math.max(1, Math.round((b.x1 - b.x0) * k)), H = Math.max(1, Math.round((b.y1 - b.y0) * k));
-  const acc = new Uint8ClampedArray(W * H * 4), wacc = new Uint16Array(W * H);
+  // Weights are kept as 16-bit fixed point (quarter units): half the memory of floats, which
+  // matters at 150 MP, without the truncation-to-zero that would break the faint end of a feather.
+  const acc = new Uint8ClampedArray(W * H * 4), wacc = new Uint16Array(W * H), WQ = 4;
   const base = [k, 0, -b.x0 * k, 0, k, -b.y0 * k, 0, 0, 1];
   const placed = S.items.filter(it => P.placed.has(it.id));
   for (let n = 0; n < placed.length; n++) {
@@ -1164,21 +1425,28 @@ async function renderPano(k, preview, onProgress) {
     wm.delete(); M2.delete();
     const d = dst.data, wd = wdst.data;
     const cr = photo?.corr.get(it.id) || null, fld = cr?.field || null;
-    const lut = cr ? [0, 1, 2].map(c => { const t = new Float32Array(256); for (let v = 0; v < 256; v++) t[v] = cr.g[c] * v + cr.b[c]; return t; }) : null;
+    // Decode once per possible input value, correct in linear light, encode through a table.
+    const lut = cr ? [0, 1, 2].map(c => {
+      const t = new Float32Array(256);
+      for (let v = 0; v < 256; v++) t[v] = SRGB_TO_LIN[v] * cr.g[c];
+      return t;
+    }) : null;
     const fs = photo ? photo.kl / k : 0, fW = photo?.W || 0, fH = photo?.H || 0;
     const ga = photo ? photo.alpha : 1, gb = photo ? photo.beta : 0, doG = photo && (ga !== 1 || gb !== 0);
-    let vmap = null, vMat = null, vlut = null;
-    if (cr?.vig) {
-      const rm = radiusMat(cv, sw, sh), vd = new cv.Mat();
-      const M3 = cv.matFromArray(3, 3, cv.CV_64F, mul(Ml, S3(sw / rm.cols, sh / rm.rows)));
-      cv.warpPerspective(rm, vd, M3, new cv.Size(bw, bh), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0));
-      rm.delete(); M3.delete(); vMat = vd; vmap = vd.data32F;
-      // exp() per pixel is far too slow at full size — precompute the curve over u instead
-      vlut = [0, 1, 2].map(c => {
-        const t = new Float32Array(VL);
-        for (let i = 0; i < VL; i++) { const u = i * VU / (VL - 1); t[i] = Math.max(0.5, Math.min(1.9, Math.exp(-(cr.vig.k[c] + cr.vig.c1[c] * u + cr.vig.c2[c] * u * u)))); }
-        return t;
-      });
+    // The shading correction varies across the frame, so it rides along as a small image warped
+    // with the same matrix — no per-pixel maths beyond a multiply.
+    let vmap = null, vMat = null;
+    if (cr?.shade && cr.shade.coef?.some(Boolean)) {
+      const n = 64, a = new Float32Array(n * n * 3);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const fx = ((x + .5) / n) * 2 - 1, fy = ((y + .5) / n) * 2 - 1, i = (y * n + x) * 3;
+        for (let c = 0; c < 3; c++)
+          a[i + c] = (cr.shade.coef[c] ? shadeGain(cr.shade.coef[c], fx, fy) : 1) * Math.exp(-cr.shade.k[c]);
+      }
+      const sm = cv.matFromArray(n, n, cv.CV_32FC3, a), vd = new cv.Mat();
+      const M3 = cv.matFromArray(3, 3, cv.CV_64F, mul(Ml, S3(sw / n, sh / n)));
+      cv.warpPerspective(sm, vd, M3, new cv.Size(bw, bh), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(1, 1, 1));
+      sm.delete(); M3.delete(); vMat = vd; vmap = vd.data32F;
     }
     const px = new Float32Array(3);
     for (let y = 0; y < bh; y++) {
@@ -1190,11 +1458,9 @@ async function renderPano(k, preview, onProgress) {
         const a = d[s * 4 + 3]; if (!a) continue;
         const q = o * 4, sp = s * 4, inv = 255 / a;
         px[0] = d[sp] * inv; px[1] = d[sp + 1] * inv; px[2] = d[sp + 2] * inv;
-        if (lut) for (let c = 0; c < 3; c++) { const v = px[c]; px[c] = lut[c][v < 0 ? 0 : v > 255 ? 255 : v | 0]; }
-        if (vlut) {
-          let ui = vmap[s] * VS | 0; if (ui < 0) ui = 0; else if (ui >= VL) ui = VL - 1;
-          px[0] *= vlut[0][ui]; px[1] *= vlut[1][ui]; px[2] *= vlut[2][ui];
-        }
+        if (lut) {
+          for (let c = 0; c < 3; c++) { const v = px[c]; px[c] = lut[c][v < 0 ? 0 : v > 255 ? 255 : v | 0]; }
+          if (vmap) { const m = s * 3; px[0] *= vmap[m]; px[1] *= vmap[m + 1]; px[2] *= vmap[m + 2]; }
         if (fld) {
           const fx = (bx0 + x) * fs, fx0 = Math.max(0, Math.min(fW - 1, Math.floor(fx))), fx1 = Math.min(fW - 1, fx0 + 1), tx = Math.max(0, Math.min(1, fx - fx0));
           const i00 = (fy0 * fW + fx0) * 3, i01 = (fy0 * fW + fx1) * 3, i10 = (fy1 * fW + fx0) * 3, i11 = (fy1 * fW + fx1) * 3;
@@ -1203,10 +1469,13 @@ async function renderPano(k, preview, onProgress) {
             px[c] += top + (bot - top) * ty;
           }
         }
-        if (doG) { px[0] = ga * px[0] + gb; px[1] = ga * px[1] + gb; px[2] = ga * px[2] + gb; }
+          if (doG) { px[0] = ga * px[0] + gb; px[1] = ga * px[1] + gb; px[2] = ga * px[2] + gb; }
+          px[0] = toSrgb(px[0]); px[1] = toSrgb(px[1]); px[2] = toSrgb(px[2]);
+        }
         if (feather) {
           const w = wd[s] * a / 255; if (w <= 0) continue;
-          const tw = Math.min(65535, wacc[o] + w), t = w / tw;
+          const wq = Math.max(1, (w * WQ + 0.5) | 0);
+          const tw = Math.min(65535, wacc[o] + wq), t = wq / tw;
           acc[q] += (px[0] - acc[q]) * t; acc[q + 1] += (px[1] - acc[q + 1]) * t; acc[q + 2] += (px[2] - acc[q + 2]) * t;
           acc[q + 3] = 255; wacc[o] = tw;
         } else if (a >= 128) {
@@ -1225,7 +1494,7 @@ async function renderPano(k, preview, onProgress) {
       rect = rectForAllowance(wacc, W, H, S.opt.paint);
       if (rect) ({ x: cx, y: cy, w: cw, h: ch } = rect);
     }
-    setStatus('Painting in the missing edges…', 'busy'); await tick();
+    progress(-1, 'Painting in the missing edges…'); await tick();
     const all = fillGaps(acc, wacc, W, H);
     if (rect) {                                   // report the share of the kept rectangle only
       let holes = 0;
@@ -1242,7 +1511,7 @@ async function renderPano(k, preview, onProgress) {
   }
   const out = mkCanvas(cw, ch);
   out.getContext('2d').putImageData(new ImageData(acc, W, H), -cx, -cy);
-  return { canvas: out, W: cw / k, H: ch / k, k, cropNote, painted };
+  return { canvas: out, W: cw / k, H: ch / k, k, cropNote, painted, cx, cy };
 }
 
 // Paint into the ragged edges a panorama leaves behind. A pyramid push-pull fill: colours are
@@ -1430,19 +1699,29 @@ function fullSize() {
   const L = layout(); return { W: L.W, H: L.H };
 }
 function fitZoom(W, H) {
-  const vp = $('#viewport'), pad = window.innerWidth < 760 ? 32 : 56;
-  return Math.min(1, (vp.clientWidth - pad) / W, (vp.clientHeight - pad) / H);
+  // Guard against being asked before the pane has a size: a viewport narrower than its own padding
+  // would otherwise produce a negative scale, and every derived number with it.
+  const vp = $('#viewport'), pad = window.innerWidth < 820 ? 28 : 52;
+  const aw = Math.max(120, vp.clientWidth - pad), ah = Math.max(120, vp.clientHeight - pad);
+  return Math.max(0.01, Math.min(1, aw / W, ah / H));
 }
 function zoomEff() { const v = S.view; return v ? (S.zoom ?? fitZoom(v.W, v.H)) : 1; }
 function wantK(W, H) {
   const z = S.zoom ?? fitZoom(W, H);
-  return Math.min(1, z * (window.devicePixelRatio || 1), Math.sqrt(PREVIEW_MAX_PX / (W * H)));
+  return Math.max(1e-3, Math.min(1, z * (window.devicePixelRatio || 1), Math.sqrt(PREVIEW_MAX_PX / (W * H))));
 }
 
 async function renderPreview() {
   const tok = ++renderTok;
   const view = $('#view');
-  if (!S.items.length) { S.view = null; renderReport(); updateExportInfo(); $('#outInfo').textContent = ''; return; }
+  if (!S.items.length) {
+    S.view = null; S.painted = 0; cmpCanvas = null;
+    renderReport(); updateExportInfo();
+    $('#outInfo').textContent = ''; $('#compare').hidden = true; $('#zLbl').textContent = 'Fit';
+    $('#toast').classList.remove('show'); setStatus('');
+    drawOverlay();
+    return;
+  }
   if (S.mode === 'pano') {
     if (S.items.length < 2) { setStatus('Panorama needs at least two overlapping images.', 'error'); return; }
     if (!S.pano) { if (!S.panoBusy && !S.panoErr) alignPano(); return; }
@@ -1451,18 +1730,22 @@ async function renderPreview() {
     const sz = fullSize(); const k = wantK(sz.W, sz.H);
     let res;
     if (S.mode === 'pano') {
-      res = await renderPano(k, true, (i, n) => { if (n > 2) setStatus(`Blending ${i + 1} of ${n}…`, 'busy'); });
+      res = await renderPano(k, true, (i, n) => { if (n > 2) progress(i / n, `Blending image ${i + 1} of ${n}…`); });
       if (tok !== renderTok) return;
       S.painted = res.painted || 0;
-      setStatus(res.cropNote || (res.painted > 0.5 ? `${res.painted.toFixed(0)}% of this image is painted in, not photographed.` : ''));
+      setStatus(res.cropNote || '');
       renderReport();
     } else res = await renderLayout(k, true);
     view.width = res.canvas.width; view.height = res.canvas.height;
     view.getContext('2d').drawImage(res.canvas, 0, 0);
     S.view = res;
+    cmpCanvas = null; cmpShowing = false;
     applyZoom();
+    drawOverlay();
     $('#outInfo').textContent = `${nf(res.W)} × ${nf(res.H)} px · ${(res.W * res.H / 1e6).toFixed(1)} MP`;
     updateExportInfo();
+    updateResultCard();
+    if (S.announce) { S.announce = false; toast(`Stitched ${S.items.length} images · ${nf(res.W)} × ${nf(res.H)}`); }
   } catch (e) {
     if (tok !== renderTok) return;
     console.error(e); setStatus(e.message || String(e), 'error');
@@ -1471,9 +1754,9 @@ async function renderPreview() {
 
 function applyZoom() {
   const v = S.view; if (!v) return;
-  const z = zoomEff(), view = $('#view');
-  view.style.width = (v.canvas.width / v.k) * z + 'px';
-  view.style.height = (v.canvas.height / v.k) * z + 'px';
+  const z = zoomEff(), st = $('#stack');
+  st.style.width = (v.canvas.width / v.k) * z + 'px';
+  st.style.height = (v.canvas.height / v.k) * z + 'px';
   $('#zLbl').textContent = S.zoom == null ? `Fit ${Math.round(z * 100)}%` : Math.round(z * 100) + '%';
   const need = wantK(v.W, v.H);
   if (Math.abs(need - v.k) / v.k > 0.25) schedule(S.mode === 'pano' ? 250 : 40);
@@ -1487,23 +1770,136 @@ function setZoom(z) {
   if (zoomEff() !== before) { vp.scrollLeft = cx * vp.scrollWidth - vp.clientWidth / 2; vp.scrollTop = cy * vp.scrollHeight - vp.clientHeight / 2; }
 }
 
-/* ---------- report panel ---------- */
+/* ---------- report panel, result card, frame highlighting ---------- */
 function renderReport() {
-  const el = $('#report');
-  if (S.mode !== 'pano' || !S.items.length) { el.hidden = true; $('#toFree').hidden = true; return; }
+  const el = $('#report'), body = $('#reportBody');
+  updateResultCard();
+  if (S.mode !== 'pano' || !S.items.length) { el.hidden = true; return; }
   el.hidden = false;
-  if (S.panoBusy) { el.innerHTML = '<h3>Alignment</h3><p class="hint">Working…</p>'; return; }
-  if (S.panoErr) { el.innerHTML = `<h3>Alignment</h3><p class="errline">${esc(S.panoErr)}</p>`; $('#toFree').hidden = true; return; }
+  if (S.panoBusy) { body.innerHTML = '<p class="hint">Working…</p>'; return; }
+  if (S.panoErr) { body.innerHTML = `<p class="errline">${esc(S.panoErr)}</p>`; return; }
   const P = S.pano;
-  if (!P) { el.innerHTML = '<h3>Alignment</h3><p class="hint">Add at least two overlapping images.</p>'; return; }
-  $('#toFree').hidden = P.model !== 'translation';
-  el.innerHTML = `<h3>Alignment · ${P.placed.size} of ${S.items.length} placed</h3>
-    <table><thead><tr><th>Linked pair</th><th>Matches</th><th>Agreeing</th></tr></thead><tbody>
+  if (!P) { body.innerHTML = '<p class="hint">Add at least two overlapping images.</p>'; return; }
+  body.innerHTML = `<table><thead><tr><th>Linked pair</th><th>Matches</th><th>Agreeing</th></tr></thead><tbody>
     ${P.links.map(l => `<tr><td>${esc(l.a)} ↔ ${esc(l.b)}</td><td class="num">${nf(l.matches)}</td><td class="num">${nf(l.inliers)} (${Math.round(l.inliers / l.matches * 100)}%)</td></tr>`).join('')}
     </tbody></table>
-    ${P.photo && S.opt.exposure !== 'off' ? `<p class="hint" style="margin:6px 0 0">Exposure matched: ${P.photo.summary.map(x => `${esc(x.name)} ${x.pct >= 0 ? '+' : '−'}${Math.abs(x.pct).toFixed(1)}%`).join(' · ')}${S.opt.exposure === 'full' ? (Math.abs(P.photo.falloff) < 1.5 ? ' · no lens falloff found' : ` · lens falloff removed (corners were ${P.photo.falloff > 0 ? 'darker' : 'brighter'} by ${Math.abs(P.photo.falloff).toFixed(0)}%)`) + ' · gradients smoothed' : ''}</p>` : ''}
-    ${S.mode === 'pano' && (S.opt.edges === 'fill' || S.opt.edges === 'trim') && S.painted > 0.5 ? `<p class="warnline">${S.painted.toFixed(0)}% of the frame is painted in from surrounding pixels — invented, not photographed. Fine for flat sky or water; soft over detailed subjects.</p>` : ''}
-    ${P.unplaced.length ? `<p class="warnline">Couldn’t place: ${P.unplaced.map(esc).join(', ')} — not enough shared detail with the others. They’re left out of the result.</p>` : ''}`;
+    ${P.photo && S.opt.exposure !== 'off' ? `<p class="hint">Exposure matched: ${P.photo.summary.map(x => `${esc(x.name)} ${x.pct >= 0 ? '+' : '−'}${Math.abs(x.pct).toFixed(1)}%`).join(' · ')}${S.opt.exposure === 'full' ? (Math.abs(P.photo.falloff) < 1.5 ? ' · no lens falloff found' : ` · lens falloff removed (corners were ${P.photo.falloff > 0 ? 'darker' : 'brighter'} by ${Math.abs(P.photo.falloff).toFixed(0)}%)`) + ' · gradients smoothed' : ''}</p>` : ''}
+    ${(S.opt.edges === 'fill' || S.opt.edges === 'trim') && S.painted > 0.5 ? `<p class="warnline">${S.painted.toFixed(0)}% of the frame is painted in from surrounding pixels — invented, not photographed. Fine for flat sky or water; soft over detailed subjects.</p>` : ''}
+    ${P.unplaced.length ? `<p class="warnline">Couldn’t place: ${P.unplaced.map(esc).join(', ')} — not enough shared detail with the others. They’re left out of the result.</p>` : ''}
+    <canvas id="map" width="560" height="150"></canvas>
+    <p class="hint">Where each frame landed. Hover an image in the list to pick it out.</p>`;
+  drawMap();
+}
+
+// A little diagram of the frame layout — quick way to spot the odd one out.
+function drawMap() {
+  const c = $('#map'), P = S.pano; if (!c || !P) return;
+  const b = P.bbox, pad = 8, sc = Math.min((c.width - pad * 2) / (b.x1 - b.x0), (c.height - pad * 2) / (b.y1 - b.y0));
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, c.width, c.height);
+  const ox = (c.width - (b.x1 - b.x0) * sc) / 2, oy = (c.height - (b.y1 - b.y0) * sc) / 2;
+  const ac = accentColor();
+  for (const it of S.items) {
+    const G = P.G.get(it.id); if (!G) continue;
+    const hot = S.hover === it.id || S.sel === it.id;
+    x.beginPath();
+    [[0, 0], [it.w, 0], [it.w, it.h], [0, it.h]].forEach(([px, py], i) => {
+      const [X, Y] = apply(G, px, py);
+      const cx = ox + (X - b.x0) * sc, cy = oy + (Y - b.y0) * sc;
+      i ? x.lineTo(cx, cy) : x.moveTo(cx, cy);
+    });
+    x.closePath();
+    x.fillStyle = hot ? ac + '33' : ac + '12'; x.fill();
+    x.strokeStyle = hot ? ac : getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+    x.lineWidth = hot ? 2 : 1; x.stroke();
+  }
+}
+
+// Outline one frame's footprint over the preview.
+function drawOverlay() {
+  const ov = $('#overlay'), v = S.view;
+  if (!ov) return;
+  if (!v) { ov.width = ov.height = 1; return; }
+  if (ov.width !== v.canvas.width || ov.height !== v.canvas.height) { ov.width = v.canvas.width; ov.height = v.canvas.height; }
+  const x = ov.getContext('2d');
+  x.clearRect(0, 0, ov.width, ov.height);
+  drawMap();
+  const id = S.hover || (S.mode === 'free' ? S.sel : null);
+  const it = id && S.items.find(i => i.id === id); if (!it) return;
+  let quad = null;
+  if (S.mode === 'pano' && S.pano?.G.has(id)) {
+    const G = S.pano.G.get(id), b = S.pano.bbox, k = v.k, cx = v.cx || 0, cy = v.cy || 0;
+    quad = [[0, 0], [it.w, 0], [it.w, it.h], [0, it.h]]
+      .map(([px, py]) => { const [X, Y] = apply(G, px, py); return [(X - b.x0) * k - cx, (Y - b.y0) * k - cy]; });
+  } else if (v.R) {
+    const r = v.R.find(q => q.it.id === id);
+    if (r) quad = [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]].map(([px, py]) => [px * v.k, py * v.k]);
+  }
+  if (!quad) return;
+  x.beginPath();
+  quad.forEach(([px, py], i) => i ? x.lineTo(px, py) : x.moveTo(px, py));
+  x.closePath();
+  const ac = accentColor();
+  x.fillStyle = ac + '1f'; x.fill();
+  x.strokeStyle = ac; x.lineWidth = Math.max(2, ov.width / 500); x.setLineDash([x.lineWidth * 4, x.lineWidth * 3]); x.stroke();
+}
+
+function updateResultCard() {
+  const card = $('#resultCard');
+  if (S.mode !== 'pano' || !S.items.length) { card.hidden = true; return; }
+  card.hidden = false;
+  const big = $('#resultBig'), sub = $('#resultSub'), facts = $('#resultFacts');
+  const P = S.pano;
+  $('#realign').disabled = S.panoBusy;
+  $('#toFree').hidden = !P || P.model !== 'translation';
+  $('#compare').hidden = !P || S.opt.exposure === 'off';
+  if (S.panoBusy) { big.textContent = 'Aligning…'; sub.textContent = ''; facts.innerHTML = ''; return; }
+  if (S.panoErr) { big.textContent = 'Couldn’t align'; sub.textContent = ''; facts.innerHTML = '<span class="fact warn">See details below the preview</span>'; return; }
+  if (!P) { big.textContent = `${S.items.length} image${S.items.length === 1 ? '' : 's'}`; sub.textContent = 'Add at least two that overlap'; facts.innerHTML = ''; return; }
+  const all = P.placed.size === S.items.length;
+  big.textContent = all ? `All ${S.items.length} frames aligned` : `${P.placed.size} of ${S.items.length} aligned`;
+  sub.textContent = S.view ? `${nf(S.view.W)} × ${nf(S.view.H)}` : '';
+  const f = [];
+  f.push(`<span class="fact ${all ? 'good' : 'warn'}">${all ? 'complete' : P.unplaced.length + ' left out'}</span>`);
+  if (S.view) f.push(`<span class="fact">${(S.view.W * S.view.H / 1e6).toFixed(1)} MP</span>`);
+  if (P.photo && S.opt.exposure !== 'off') f.push('<span class="fact good">exposure matched</span>');
+  if (P.photo && S.opt.exposure === 'full' && Math.abs(P.photo.falloff) >= 1.5)
+    f.push(`<span class="fact good">falloff −${Math.abs(P.photo.falloff).toFixed(0)}%</span>`);
+  if (S.painted > 0.5) f.push(`<span class="fact warn">${S.painted.toFixed(0)}% painted in</span>`);
+  facts.innerHTML = f.join('');
+}
+
+/* ---------- hold to compare: the same stitch with exposures left alone ---------- */
+let cmpCanvas = null, cmpBusy = false, cmpShowing = false;
+async function compareDown() {
+  if (!S.view || S.mode !== 'pano' || !S.pano || S.opt.exposure === 'off') return;
+  $('#compare').classList.add('on');
+  if (!cmpCanvas && !cmpBusy) {
+    cmpBusy = true;
+    const keep = S.opt.exposure;
+    try {
+      progress(-1, 'Rendering the original for comparison…');
+      S.opt.exposure = 'off'; S.pano.photoMode = null;
+      const res = await renderPano(S.view.k, true, () => {});
+      cmpCanvas = res.canvas;
+    } catch (e) { console.error(e); }
+    finally { S.opt.exposure = keep; S.pano.photoMode = null; cmpBusy = false; setStatus(''); }
+  }
+  if (!cmpCanvas) return;
+  cmpShowing = true;
+  const view = $('#view'), ctx = view.getContext('2d');
+  ctx.clearRect(0, 0, view.width, view.height);
+  ctx.drawImage(cmpCanvas, 0, 0, view.width, view.height);
+  setStatus('Showing the original exposures — release to compare');
+}
+function compareUp() {
+  $('#compare').classList.remove('on');
+  if (!cmpShowing || !S.view) return;
+  cmpShowing = false;
+  const view = $('#view'), ctx = view.getContext('2d');
+  ctx.clearRect(0, 0, view.width, view.height);
+  ctx.drawImage(S.view.canvas, 0, 0);
+  setStatus('');
 }
 
 /* ---------- export ---------- */
@@ -1575,16 +1971,27 @@ function initPointer() {
   });
   const end = () => { if (drag) { drag = null; vp.classList.remove('panning'); } };
   vp.addEventListener('pointerup', end); vp.addEventListener('pointercancel', end);
+  view.addEventListener('mouseleave', () => { if (S.hover) { S.hover = null; drawOverlay(); } });
   vp.addEventListener('wheel', e => {
     if (!(e.ctrlKey || e.metaKey) || !S.view) return;
     e.preventDefault(); setZoom(zoomEff() * Math.exp(-e.deltaY * 0.0025));
   }, { passive: false });
   document.addEventListener('keydown', e => {
-    if (S.mode !== 'free' || !S.sel || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+    if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName) || e.metaKey || e.ctrlKey) return;
+    const k = e.key;
+    if (k === '?' || (k === '/' && e.shiftKey)) { e.preventDefault(); $('#help').open ? $('#help').close() : $('#help').showModal(); return; }
+    if (k === '+' || k === '=') { e.preventDefault(); setZoom(zoomEff() * 1.5); return; }
+    if (k === '-' || k === '_') { e.preventDefault(); setZoom(zoomEff() / 1.5); return; }
+    if (k === '0') { e.preventDefault(); setZoom(null); return; }
+    if (k === '1') { e.preventDefault(); setZoom(1); return; }
+    if (k === 'd' || k === 'D') { e.preventDefault(); if (!$('#download').disabled) doExport(); return; }
+    if ((k === 'c' || k === 'C') && !e.repeat) { e.preventDefault(); compareDown(); return; }
+    if (S.mode !== 'free' || !S.sel) return;
     const d = e.shiftKey ? 10 : 1, it = S.items.find(i => i.id === S.sel); if (!it) return;
-    const m = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key]; if (!m) return;
+    const m = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[k]; if (!m) return;
     e.preventDefault(); it.x += m[0]; it.y += m[1]; updateFreePos(); requestFrame();
   });
+  document.addEventListener('keyup', e => { if (e.key === 'c' || e.key === 'C') compareUp(); });
 }
 let raf = 0;
 function requestFrame() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderPreview(); }); }
@@ -1620,7 +2027,7 @@ async function loadSample() {
     if (ex) { fx.fillStyle = ex > 0 ? `rgba(255,255,255,${ex})` : `rgba(0,0,0,${-ex})`; fx.fillRect(0, 0, 1100, 860); }
     out.push(makeItem(name, await createImageBitmap(f)));
   }
-  S.items = out; S.sample = true; placeFreeDefaults(); itemsChanged();
+  S.items = out; S.sample = true; placeFreeDefaults(); itemsChanged(); updateTopHint();
 }
 
 /* ---------- wiring ---------- */
@@ -1629,6 +2036,13 @@ function init() {
   const file = $('#file');
   const pick = () => file.click();
   $('#addTop').onclick = pick; $('#addEmpty').onclick = pick;
+  $('#sampleBtn').onclick = () => { clearItems(); loadSample(); };
+  $('#clearSample').onclick = () => { clearItems(); S.sample = false; S.view = null; itemsChanged(); };
+  $('#helpBtn').onclick = () => $('#help').showModal();
+  $('#helpClose').onclick = () => $('#help').close();
+  const cmp = $('#compare');
+  cmp.addEventListener('pointerdown', e => { e.preventDefault(); compareDown(); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => cmp.addEventListener(ev, compareUp));
   file.onchange = () => { if (file.files.length) addFiles(file.files); file.value = ''; };
   $('#clearAll').onclick = () => { clearItems(); S.sample = false; S.view = null; itemsChanged(); setStatus(''); };
   $('#zIn').onclick = () => setZoom(zoomEff() * 1.5);
@@ -1648,7 +2062,12 @@ function init() {
   window.addEventListener('dragover', e => e.preventDefault());
   window.addEventListener('drop', e => { e.preventDefault(); depth = 0; document.body.classList.remove('dropping'); if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
   window.addEventListener('paste', e => { const f = [...(e.clipboardData?.files || [])]; if (f.length) addFiles(f); });
-  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.zoom == null) applyZoom(); }, 100); });
+  let rt;
+  const refit = () => { clearTimeout(rt); rt = setTimeout(() => { if (S.zoom == null && S.view) applyZoom(); }, 120); };
+  window.addEventListener('resize', refit);
+  if (window.ResizeObserver) new ResizeObserver(refit).observe($('#viewport'));
+  $('#report').addEventListener('toggle', refit);
+  updateTopHint();
   loadSample();
 }
 init();

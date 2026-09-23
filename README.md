@@ -20,36 +20,49 @@ camera-rendered JPEG preview embedded in the file, since browsers can't demosaic
 ## Exposure correction
 
 Blending alone cannot fix frames shot at different exposures — it spreads the difference across the
-overlap, which reads as a bright or dark band. Lens vignetting makes it worse: every frame is dark
-at its edges, and the edges are where frames meet, so you get a dip at every seam. Three stages, all
-computed on a small copy of the panorama:
+overlap, which reads as a bright or dark band. Uneven shading makes it worse: every frame is darker
+at its edges, and the edges are where frames meet, so you get a dip at every seam.
 
-1. **Brightness and colour match.** Every overlap is measured at once and solved jointly for a gain
-   and offset per frame, per channel. Solved together, the correction spreads across the set instead
-   of piling onto the last frame.
-2. **Lens falloff.** One falloff curve for the set plus a per-frame exposure term, solved in log
-   space. This is the stage local blending can't replace: it links a frame's dark edge to its own
-   bright centre, which is the only place that information exists.
+Everything photometric happens in **linear light**. Exposure is a multiply on the light reaching the
+sensor, not on the gamma-encoded numbers a JPEG stores; gains fitted on encoded values can line the
+mid-tones up and still leave the sky stepped.
+
+1. **Exposure match.** Every overlap is measured at once and solved jointly for one gain per frame
+   per channel, as log gains. The multiplicative form matters: an equation matching `gain × mean +
+   offset` between frames is satisfied just as well by shrinking every gain toward zero, and with
+   enough overlapping pairs outvoting the priors, that is exactly what a solver does — every frame
+   pinned at the minimum gain and the panorama washed out. In log space only differences between
+   frames appear, and the one remaining degree of freedom is pinned by a prior.
+2. **Shading.** One field shared by the set — same lens, same filter — plus a per-frame exposure
+   term. Its basis is ordered radial-first, and the asymmetric terms are heavily penalised, because
+   frames shot in a single row only overlap side by side: the same scene point appears at different
+   x in two frames but at the *same* y, so nothing in the data constrains vertical behaviour. Fitted
+   freely, the vertical term came back with the wrong sign and inverted the correction. The fit is
+   also validated before it is trusted — half the overlap samples train it, the other half judge it
+   against a plain per-frame-exposure model — and rejected if it implies an implausibly strong
+   falloff.
 3. **Gradient smoothing.** A heavily blurred correction field pulls each frame toward its
    neighbours, absorbing drifting auto-exposure, moving cloud, uneven scanner lighting.
 
-The pair constraints in stage 1 only pin frames *relative* to each other, so the solution has a
-global degree of freedom and can drift (in practice, darker). After stages 1–2 the set's overall
-mean and spread are restored to where they started, so only the *differences* between frames are
-corrected. `test/synthetic.test.js` guards this; it is the bug real photos caught and synthetic
-tests missed.
+Measured against ground truth (`test/synthetic.test.js` builds a scene, cuts overlapping frames,
+damages them *in linear light* as a camera and lens would, stitches, and compares back):
 
-Measured against ground truth (one known scene, cut into overlapping frames, damaged, stitched,
-compared back):
-
-| Damage | Error before | After |
+| Damage in the frames | Error before | After |
 | --- | --- | --- |
-| Exposure differences | 9.0 rms / 23 worst | 1.8 rms / 6.4 worst |
-| Exposure + vignetting | 18.0 rms / 70 worst | 4.1 rms / 34 worst |
+| Exposure differences (±½ stop) | 15.8 rms | **1.2 rms** |
+| Exposure + 45% corner falloff | 18.1 rms | **8.7 rms** |
 
-On a real 26-frame handheld sweep whose auto-exposure wandered 1/640 s → 1/200 s, brightness wander
-across 2.5M flat-sky pixels dropped from 21.7 to 12.7 levels, while the sky's genuine left-to-right
-gradient was left intact.
+The second case is heavier than most real lenses, and the correction recovers about half of it: what
+it can fit is limited to what the overlaps actually observe.
+
+### A note on measuring this
+
+An earlier version of this README claimed a 41% reduction in sky wander on a real 26-frame set. That
+number was wrong and is withdrawn. Wander was measured in absolute levels, so a build that darkened
+the whole panorama scored well for the wrong reason — and a genuinely broken solve, with every gain
+pinned at its clamp, scored best of all. Absolute measures of evenness flatter anything that reduces
+contrast. `test/real.test.js` still prints the number, but as information beside the image, not as a
+gate; what it asserts instead is that overall brightness is preserved.
 
 ## Painted-in edges
 
