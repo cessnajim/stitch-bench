@@ -4,7 +4,7 @@
 // whether a person opens the file or an agent calls a tool. This module owns the browser
 // lifecycle, moves files in and pixels out, and translates page state into plain data.
 import { launch } from 'puppeteer-core';
-import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -72,6 +72,16 @@ function queue(fn) {
 function checkImages(images) {
   const missing = images.filter(p => !existsSync(p));
   if (missing.length) throw new Error(`These files do not exist: ${missing.join(', ')}`);
+  // Chrome's file input accepts a directory without complaint and yields nothing, so the page would
+  // sit at zero items until the ten-minute load timeout expired. Catch it here, where the message
+  // can say what actually went wrong.
+  const dirs = images.filter(p => statSync(p).isDirectory());
+  if (dirs.length) {
+    throw new Error(
+      `These are directories, not image files: ${dirs.join(', ')}. The MCP tools expand a directory ` +
+      `before reaching this point, so a directory here means one was passed straight to the stitcher.`
+    );
+  }
   return images.map(p => resolve(p));
 }
 
