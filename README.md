@@ -92,3 +92,7 @@ of overlapping photos to run the real-image checks as well.
 Optional helpers for pulling source frames out of a self-hosted [Immich](https://immich.app) DAM
 through its MCP gateway, and pushing results back. Configure with `DAM_MCP_URL` and, for a private
 CA, `DAM_CA_PEM`. Unrelated to the stitcher itself — it only ever reads files from disk.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
