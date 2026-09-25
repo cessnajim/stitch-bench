@@ -100,6 +100,12 @@ The one degree of freedom the overlaps cannot see: scaling every frame's gain to
 every pair constraint equally well. Left alone, the solve takes it, usually darker.
 _Avoid_: washout, global bias, collapse
 
+**Anchor gain**:
+The single gain every frame shares, chosen so the anchor region comes out as bright as it went in.
+It is what settles the drift, and the only thing in the photometric path allowed to decide how
+bright the set is overall; every other stage only changes frames relative to one another.
+_Avoid_: level, normalisation, rescale, overall brightness
+
 **Verdict**:
 What the shading stage concluded and reported — that shading was found and removed, that none was
 found, or that a fit was found and refused. A stage that declines to act says so rather than staying
@@ -157,6 +163,9 @@ _Avoid_: source pixel, sample
   the act is **Painting in**, and "fill" is reserved for the setting that paints the whole frame.
 - "group" and "burst" both named a run of frames from one sweep, and "group" also named the act of
   splitting a directory into them. Resolved: the noun is a **Burst**; grouping is what produces them.
+- "level" named the set's shared gain in ADR-0005 and in an output field, `level_stops`, though
+  this glossary already listed it as a word to avoid. Resolved: the shared gain is the **Anchor
+  gain**, reported as `anchor_gain_stops`.
 - "anchor" named both the frame others are placed against and the pixels used to pin brightness.
   Resolved: **Anchor frame** for placement, **Anchor region** for brightness, and neither is
   shortened to "anchor" on its own.

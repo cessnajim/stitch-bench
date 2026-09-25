@@ -1247,9 +1247,9 @@ function buildPhotometric(cv, mode) {
     src.delete(); dst.delete(); M1.delete(); M2.delete(); M3.delete(); wm.delete(); wd.delete(); rm.delete(); rd.delete();
     L.push({ it, rgb, wt, fx, fy, rgb0: Float32Array.from(rgb) });
   }
-  // The pair constraints below only fix images *relative* to each other: scaling every gain and
-  // offset together satisfies them equally well, so the solution can drift (usually darker). Keep
-  // the untouched statistics here and rescale at the end so the set as a whole is left alone.
+  // The pair constraints below only fix images *relative* to each other: scaling every gain
+  // together satisfies them equally well, so the solution can drift. Keep the untouched statistics
+  // here, so anchorTo can put the set's brightness back where it started.
   // Sample the frame centres, not the whole frame: the middle of a frame is the part the lens
   // did not darken, so anchoring there means removing falloff restores light to the corners
   // instead of pulling the whole panorama down to match them.
@@ -1271,7 +1271,7 @@ function buildPhotometric(cv, mode) {
   // gain toward zero, and with enough overlapping pairs outvoting the priors that is exactly what
   // the solver does — every frame pinned at the minimum gain and the whole panorama washed out.
   // In log space only differences between frames appear, so the one remaining degree of freedom is
-  // a constant shift that the prior pins cleanly.
+  // a constant shift — the drift — which this stage pins at zero and leaves to anchorTo to place.
   const doExposure = () => {
     const stats = new Map(), cov = new Int32Array(N);
     for (let q = 0; q < W * H; q++) {
@@ -1328,50 +1328,43 @@ function buildPhotometric(cv, mode) {
         offs[c][i] = 0;
       }
     }
-    // Setting the level, which is the other half of fixing the gauge. Sum-to-zero leaves the log
-    // gains either side of zero, so their geometric mean is one — but light averages
-    // arithmetically, and a frame lifted 2.8x brings in far more of it than one held back to 0.35
-    // takes out. Centre a wide sweep that way and the panorama comes out brighter overall, on a
-    // real set by enough to blow the sky. Pick the factor that leaves the set's own mean where it
-    // was instead: it is common to every frame, which is exactly the freedom the pair rows never
-    // constrained, so it moves the level without disturbing how the frames agree. The rails above
-    // are not reapplied — they bound the solve, and the level is the part of the answer the solve
-    // was never entitled to decide.
-    //
-    // Both sides are read the way the blend will read them: one value per output pixel, frames
-    // averaged by the weights that will composite them. Summing per frame instead counts an
-    // overlap once for every frame covering it, weighting the seams above the rest of the picture.
-    //
-    // Linear light. Matching the encoded mean was tried, on the grounds that encoding is concave
-    // and closing the spread therefore lifts the average of the encoded pixels even when the light
-    // is unchanged — true, as far as it goes. On the one real set it was tried against, that
-    // version left the panorama 22% darker overall where this one holds it within 5%, for reasons
-    // not yet traced through the two stages below. It was never scored on synthetic ground truth.
-    // docs/adr/0005 has the numbers and the limits of what they show.
-    let before = 0, after = 0;
-    for (let q = 0; q < W * H; q++) {
-      let ws = 0, b = 0, a = 0;
-      for (let i = 0; i < N; i++) {
-        const w = L[i].wt[q]; if (!w) continue;
-        ws += w;
-        for (let c = 0; c < 3; c++) { const v = L[i].rgb[q * 3 + c]; b += w * v; a += w * v * gains[c][i]; }
-      }
-      if (ws) { before += b / ws; after += a / ws; }
-    }
-    level = after > 1e-9 && before > 1e-9 ? before / after : 1;
-    if (!Number.isFinite(level) || level <= 0) level = 1;
-    for (let c = 0; c < 3; c++) for (let i = 0; i < N; i++) gains[c][i] *= level;
     for (let i = 0; i < N; i++) for (let q = 0; q < W * H; q++) {
       if (!L[i].wt[q]) continue;
       for (let c = 0; c < 3; c++) L[i].rgb[q * 3 + c] *= gains[c][i];
     }
   };
 
-  let vig = null, level = 1;
+  // The anchor gain: one gain shared by every frame, and the only thing in this function that
+  // decides how bright the set comes out. It keeps the anchor region's mean linear brightness where
+  // it was before any correction — frame centres, so taking out falloff gives light back to the
+  // corners instead of pulling the middle down to meet them. Being common to every frame, it sits
+  // in exactly the freedom the overlaps cannot see, and cannot disturb how the frames agree.
+  //
+  // It is re-asserted after each stage that can move brightness, rather than left to a stage of its
+  // own at the end, because each stage reads absolute values — the exposure and shading fits both
+  // set aside near-black and near-white pixels — and should see the set where it will finish.
+  // Nothing else here may change the set's brightness. There used to be three things that did: a
+  // factor inside the exposure stage, the shading fit's per-frame term, and an affine rescale
+  // clamped to 0.94–1.06 on spread and ±0.08 on offset. On a real three-stop sweep the rescale sat
+  // on its spread clamp, trimming contrast by 6% that no one had asked it to (docs/adr/0006).
+  let vig = null, anchorGain = 1;
+  const anchorTo = () => {
+    if (n0 <= 100) return;
+    const a1 = anchorStats(anchorU);
+    const g = a1.n && a1.s > 1e-9 ? (s0 / n0) / (a1.s / a1.n) : 1;
+    if (!Number.isFinite(g) || g <= 0) return;
+    anchorGain *= g;
+    for (let c = 0; c < 3; c++) for (let i = 0; i < N; i++) gains[c][i] *= g;
+    for (const l of L) for (let q = 0; q < W * H; q++) {
+      if (!l.wt[q]) continue;
+      for (let c = 0; c < 3; c++) l.rgb[q * 3 + c] *= g;
+    }
+  };
   // Stage order is measurable, not obvious: matching brightness first keeps the lens fit clean on
   // synthetic input, but on real frames the falloff must come out before the gains are fitted, or
   // the gain solve partly absorbs the vignette and the sky is left uneven.
   doExposure();
+  anchorTo();
   // Try the shading stage against the state without it and keep whichever reads flatter. Uneven
   // shading is real and worth removing when it is there, but a fit that latches onto scene
   // structure leaves a worse panorama than no correction at all.
@@ -1400,22 +1393,9 @@ function buildPhotometric(cv, mode) {
       shadeVerdict = 'none found';
     }
   }
-  // undo the drift: one global affine that puts the set's mean and spread back where they started
-  let alpha = 1, beta = 0;
-  if (n0 > 100) {
-    const a1 = anchorStats(anchorU);
-    const n1 = a1.n, s1 = a1.s, q1 = a1.q;
-    const m0 = s0 / n0, sd0 = Math.sqrt(Math.max(1e-6, q0 / n0 - m0 * m0));
-    const m1 = s1 / n1, sd1 = Math.sqrt(Math.max(1e-6, q1 / n1 - m1 * m1));
-    // Match the mean, and allow only a slight correction of spread. Forcing the spread back to
-    // where it started lets a big contrast stretch through, which amplifies any banding left over.
-    alpha = Math.max(0.94, Math.min(1.06, sd0 / sd1));
-    beta = Math.max(-0.08, Math.min(0.08, m0 - alpha * m1));
-    for (const l of L) for (let q = 0; q < W * H; q++) {
-      if (!l.wt[q]) continue;
-      for (let c = 0; c < 3; c++) l.rgb[q * 3 + c] = alpha * l.rgb[q * 3 + c] + beta;
-    }
-  }
+  // Shading's per-frame term can carry a shift common to every frame, and its field is only
+  // neutral exactly at each frame's centre, so the set is put back once more.
+  anchorTo();
   // stage 3 — low-frequency correction: pull each frame gently toward the local blend
   const corr = new Map(), summary = [];
   let fields = null;
@@ -1445,7 +1425,7 @@ function buildPhotometric(cv, mode) {
       shade: vig ? { k: [vig.k[0][i], vig.k[1][i], vig.k[2][i]], coef: vig.coef } : null });
     const vg = vig ? Math.exp(-(vig.k[0][i] + vig.k[1][i] + vig.k[2][i]) / 3) : 1;
     const midLin = SRGB_TO_LIN[128], gAvg = g.reduce((s, v) => s + v, 0) / 3;
-    const mid = toSrgb(alpha * midLin * gAvg * vg + beta) / 128 - 1;
+    const mid = toSrgb(midLin * gAvg * vg) / 128 - 1;
     summary.push({ name: it.name, pct: mid * 100 });
   });
   // how much darker the frame edges were than the middle, averaged over the four corners
@@ -1458,7 +1438,7 @@ function buildPhotometric(cv, mode) {
     }
     falloff = n ? sum / n * 100 : 0;
   }
-  return { corr, W, H, kl, summary, mode, falloff, alpha, beta, shadeVerdict, level };
+  return { corr, W, H, kl, summary, mode, falloff, shadeVerdict, anchorGain };
 }
 
 function panoSize() { const b = S.pano.bbox; return { W: b.x1 - b.x0, H: b.y1 - b.y0 }; }
@@ -1506,7 +1486,6 @@ async function renderPano(k, preview, onProgress) {
       return t;
     }) : null;
     const fs = photo ? photo.kl / k : 0, fW = photo?.W || 0, fH = photo?.H || 0;
-    const ga = photo ? photo.alpha : 1, gb = photo ? photo.beta : 0, doG = photo && (ga !== 1 || gb !== 0);
     // The shading correction varies across the frame, so it rides along as a small image warped
     // with the same matrix — no per-pixel maths beyond a multiply.
     let vmap = null, vMat = null;
@@ -1543,7 +1522,6 @@ async function renderPano(k, preview, onProgress) {
             px[c] += top + (bot - top) * ty;
           }
         }
-          if (doG) { px[0] = ga * px[0] + gb; px[1] = ga * px[1] + gb; px[2] = ga * px[2] + gb; }
           px[0] = toSrgb(px[0]); px[1] = toSrgb(px[1]); px[2] = toSrgb(px[2]);
         }
         if (feather) {

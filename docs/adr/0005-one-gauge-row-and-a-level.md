@@ -1,5 +1,9 @@
 # The exposure gauge is one row, and the level is chosen separately
 
+> The gauge decision here stands. The "level" step it introduced has been replaced by the anchor
+> gain in [ADR-0006](0006-one-owner-for-the-sets-brightness.md), which also removes the rescale this
+> record discusses; "level" is not a term this project uses.
+
 [ADR-0001](0001-log-gains-not-gain-and-offset.md) settles that exposure is solved as log gains and
 notes that the one remaining degree of freedom — the same constant added to every log gain — is
 pinned by a prior. It is one degree of freedom, so it takes one row to pin. The implementation used

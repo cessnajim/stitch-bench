@@ -41,8 +41,11 @@ mid-tones up and still leave the sky stepped.
    pinned by a single sum-to-zero row. One row, because it is one degree of freedom: a prior per
    frame also pins it, but the surplus rows quietly assert that the frames were all exposed alike,
    and an auto-exposure sweep across three stops gets dragged inward until its ends sit on their
-   clamps. Where the set as a whole then sits is chosen separately, afterwards, as the single
-   factor that leaves its mean brightness where it was.
+   clamps. Where the set as a whole then sits is decided in one place: a single gain shared by
+   every frame, chosen so the frame centres come out exactly as bright as they went in. Centres,
+   because they are the part of a frame the lens did not darken — so taking out falloff gives light
+   back to the corners rather than pulling the middle down to meet them. Nothing else in the
+   pipeline is allowed to move the set's overall brightness.
 2. **Shading.** One field shared by the set — same lens, same filter — plus a per-frame exposure
    term. Its basis is ordered radial-first, and the asymmetric terms are heavily penalised, because
    frames shot in a single row only overlap side by side: the same scene point appears at different
