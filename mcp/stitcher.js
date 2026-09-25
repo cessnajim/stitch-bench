@@ -90,8 +90,32 @@ async function loadImages(pg, images) {
   await input.uploadFile(...images);
   // The list is emptied before uploading, so a count is enough. Matching on file names would
   // deadlock on anything named like the built-in sample.
-  await pg.waitForFunction(n => S.items.length === n, { timeout: 600000, polling: 500 }, images.length);
+  //
+  // Count both doors out of addFiles. Waiting on items alone means a file the browser cannot
+  // decode — a TIFF, a RAW with no embedded preview — is never accounted for, and the wait runs to
+  // its ten-minute timeout and then reports nothing about which file was at fault. Every file
+  // arrives somewhere, so the sum is what settles.
+  try {
+    // Both the count and the flag: the count alone can come true on the last file, a moment before
+    // addFiles has finished laying the items out.
+    await pg.waitForFunction(
+      n => !S.loading && S.items.length + S.unreadable.length === n,
+      { timeout: 600000, polling: 500 }, images.length);
+  } catch (e) {
+    const seen = await pg.evaluate(() => S.items.length + S.unreadable.length).catch(() => 0);
+    throw new Error(
+      `Reading the images did not finish: ${seen} of ${images.length} were accounted for before the ` +
+      `wait timed out. This is a bug in the page's file loading, not in the files themselves.`);
+  }
+  // Back to the path that was sent, by position: the page only ever sees a file's name, and two
+  // folders can each hold a DSC_0001.JPG.
+  const found = await pg.evaluate(() => S.unreadable.map(u => ({ ...u })));
+  return found.map(({ index, ...u }) => ({ ...u, path: images[index] ?? null }));
 }
+
+// A file that could not be opened is named, with the reason, wherever it matters: in the error
+// when too few are left to work with, and in the result when the job went ahead without it.
+const unreadableNote = list => list.map(u => `${u.name} (${u.reason})`).join(', ');
 
 async function applyOptions(pg, opts) {
   await pg.evaluate(o => { Object.assign(S.opt, o); if (S.pano) S.pano.photoMode = null; }, opts);
@@ -199,7 +223,12 @@ export function stitchPanorama(args) {
     const pg = await open(args.onProgress);
     try {
       await pg.evaluate(() => { clearItems(); S.sample = false; itemsChanged(); });
-      await loadImages(pg, images);
+      const unreadable = await loadImages(pg, images);
+      if (images.length - unreadable.length < 2) {
+        throw new Error(
+          `Only ${images.length - unreadable.length} of ${images.length} images could be read, which is ` +
+          `too few to stitch. Could not read: ${unreadableNote(unreadable)}.`);
+      }
       await applyOptions(pg, {
         exposure: args.exposure, edges: args.edges, paint: args.paint_limit,
         model: args.motion, blend: args.seams, features: args.detail,
@@ -221,6 +250,7 @@ export function stitchPanorama(args) {
         megapixels: +(meta.width * meta.height / 1e6).toFixed(1),
         bytes: meta.bytes,
         painted_percent: meta.painted_percent,
+        unreadable,
         exposure: await photometry(pg),
         seconds: +((Date.now() - t0) / 1000).toFixed(1),
         ...report,
@@ -237,11 +267,16 @@ export function inspectAlignment(args) {
     const pg = await open(args.onProgress);
     try {
       await pg.evaluate(() => { clearItems(); S.sample = false; itemsChanged(); });
-      await loadImages(pg, images);
+      const unreadable = await loadImages(pg, images);
+      if (images.length - unreadable.length < 2) {
+        throw new Error(
+          `Only ${images.length - unreadable.length} of ${images.length} images could be read, which is ` +
+          `too few to check an alignment. Could not read: ${unreadableNote(unreadable)}.`);
+      }
       await applyOptions(pg, { model: args.motion, features: args.detail, exposure: 'off' });
       const report = await alignAndReport(pg, args.onProgress);
       if (report.error) throw new Error(report.error);
-      return { result: report };
+      return { result: { ...report, unreadable } };
     } finally { touchIdle(); }
   });
 }
@@ -253,7 +288,10 @@ export function stitchLayout(args) {
     const pg = await open(args.onProgress);
     try {
       await pg.evaluate(() => { clearItems(); S.sample = false; itemsChanged(); });
-      await loadImages(pg, images);
+      const unreadable = await loadImages(pg, images);
+      if (images.length - unreadable.length < 1) {
+        throw new Error(`None of the ${images.length} images could be read: ${unreadableNote(unreadable)}.`);
+      }
       await pg.evaluate((mode, o) => {
         S.mode = mode; modeUI(); Object.assign(S.opt, o);
       }, args.mode === 'column' ? 'col' : args.mode, {
@@ -268,7 +306,7 @@ export function stitchLayout(args) {
       const result = {
         output_path: args.output, width: meta.width, height: meta.height,
         megapixels: +(meta.width * meta.height / 1e6).toFixed(1),
-        bytes: meta.bytes, images: images.length,
+        bytes: meta.bytes, images: images.length - unreadable.length, unreadable,
         seconds: +((Date.now() - t0) / 1000).toFixed(1),
       };
       const preview = args.preview ? await previewImage(pg, false) : null;

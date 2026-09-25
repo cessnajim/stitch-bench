@@ -7,19 +7,34 @@
 // docs/adr/0004-one-implementation-driven-through-the-page.md); this is input resolution, not
 // stitching.
 import { promises as fsp } from 'node:fs';
-import { resolve, join, extname, basename } from 'node:path';
+import { resolve, join, extname, basename, dirname } from 'node:path';
 
-// What the page can actually open. RAW files are read through the preview the camera embedded in
-// them, so the list is "formats with a usable preview", not "formats we can demosaic".
+// Read through the preview the camera embedded in them rather than demosaiced, which is why these
+// count as openable at all.
+const RAW_EXT = new Set(['.nef', '.cr2', '.cr3', '.arw', '.dng', '.raf', '.orf', '.rw2', '.srw', '.pef']);
+
+// What might be a picture. Deciding it actually is one belongs to the browser, which will refuse
+// some of these — TIFF and HEIC most often — and say so per file; this list only decides what is
+// worth handing over. One set built from the other, so the two cannot drift apart.
 const IMAGE_EXT = new Set([
   '.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tif', '.tiff', '.avif', '.heic', '.heif',
-  '.nef', '.cr2', '.cr3', '.arw', '.dng', '.raf', '.orf', '.rw2', '.srw', '.pef',
+  ...RAW_EXT,
 ]);
 
 // Files and folders this server wrote earlier. Stitching a folder twice should not fold the first
 // panorama back into the second, and a recursive scan should not descend into collected bursts.
 const OUR_OUTPUT = /^(panorama|row|column|grid)([-.]|$)/i;
 const OUR_DIR = /^burst-\d+$/i;
+
+// Asked by the write guard, and deliberately narrower than OUR_OUTPUT. Replacing one of our own
+// results is the point of re-running, but a prefix is not provenance: a library of panoramas is
+// full of photographs called panorama-something, and those are what the guard exists to protect.
+// So only the names this tool actually writes qualify — a timestamped default (thirteen digits
+// from before the stamp ran to whole seconds, fourteen since), or a panorama inside a burst folder.
+const OUR_STAMPED = /^(panorama|row|column|grid)-\d{13,14}\.(jpg|png|webp)$/;
+const OUR_COLLECTED = /^panorama\.(jpg|png|webp)$/;
+export const isOurOutput = path =>
+  OUR_STAMPED.test(basename(path)) || (OUR_COLLECTED.test(basename(path)) && OUR_DIR.test(basename(dirname(path))));
 
 const readAt = async (fh, off, len) => {
   const b = Buffer.alloc(len);
@@ -121,20 +136,55 @@ async function walk(dir, recursive, out, seen) {
   }
 }
 
+// A camera set to RAW+JPEG writes two files for one press of the shutter. They are one frame, and
+// taking both means aligning a frame against its own copy: twice the work, a burst that counts
+// double, and every overlap in the pair measured twice over, which doubles its weight in the
+// exposure solve. The JPEG is the one to keep — a RAW reaches the page through the preview the
+// camera embedded in it, which is the smaller and more heavily compressed of the two renderings
+// the camera made from that exposure.
+//
+// Only a sibling every browser opens gets to displace the RAW. An iPhone writes HEIC beside its
+// DNG and an editor may export TIFF beside a NEF; neither usually decodes, and preferring them
+// would trade a frame that works, through its preview, for one that is certain to come back
+// unreadable.
+//
+// Only files found by expanding a directory are considered. Naming files is the caller saying
+// which frames they want, and that is not this server's to second-guess.
+const DISPLACES_RAW = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+
+function pairRawWithJpeg(files, fromDir) {
+  const stem = f => f.slice(0, f.length - extname(f).length);   // full path, so this is per-folder
+  const opens = new Set();
+  for (const f of files) if (DISPLACES_RAW.has(extname(f).toLowerCase())) opens.add(stem(f));
+  const paired = [];
+  const kept = files.filter(f => {
+    if (!fromDir.has(f) || !RAW_EXT.has(extname(f).toLowerCase())) return true;
+    if (!opens.has(stem(f))) return true;
+    paired.push(f);
+    return false;
+  });
+  return { kept, paired };
+}
+
 // Files stay as they are; directories expand to the images inside them. Reports whether any
 // directory was named, because that is what decides whether grouping is wanted.
 export async function expandSources(paths, { recursive = false } = {}) {
-  const files = [], missing = [], seen = new Set();
+  const files = [], missing = [], seen = new Set(), fromDir = new Set();
   let sawDirectory = false;
   for (const p of paths) {
     const abs = resolve(p);
     let st;
     try { st = await fsp.stat(abs); } catch { missing.push(p); continue; }
-    if (st.isDirectory()) { sawDirectory = true; await walk(abs, recursive, files, seen); }
-    else if (!seen.has(abs)) { seen.add(abs); files.push(abs); }
+    if (st.isDirectory()) {
+      sawDirectory = true;
+      const before = files.length;
+      await walk(abs, recursive, files, seen);
+      for (let i = before; i < files.length; i++) fromDir.add(files[i]);   // order is preserved
+    } else if (!seen.has(abs)) { seen.add(abs); files.push(abs); }
   }
   if (missing.length) throw new Error(`These files do not exist: ${missing.join(', ')}`);
-  return { files, sawDirectory };
+  const { kept, paired } = pairRawWithJpeg(files, fromDir);
+  return { files: kept, sawDirectory, pairedRaw: paired };
 }
 
 export async function timedEntries(files) {
@@ -166,7 +216,11 @@ export const describeBurst = (run, index) => ({
   frames: run.length,
   span_seconds: Math.round((run[run.length - 1].at - run[0].at) / 100) / 10,
   starts_at: run[0].at.toISOString(),
-  time_source: run.every(e => e.source === 'exif') ? 'exif' : 'mtime',
+  // Same three answers groupBursts gives. Collapsing "mixed" into "mtime" would say a burst was
+  // grouped entirely on file dates when most of it carried a real shutter time, and the point of
+  // reporting this at all is that grouping on file dates is a guess.
+  time_source: run.every(e => e.source === 'exif') ? 'exif'
+    : run.some(e => e.source === 'exif') ? 'mixed' : 'mtime',
   files: run.map(e => e.path),
 });
 

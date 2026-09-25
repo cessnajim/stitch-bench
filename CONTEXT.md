@@ -47,6 +47,13 @@ Frames that fall outside every burst, because too few were taken close enough to
 they are visibly skipped rather than silently swept into a neighbouring panorama.
 _Avoid_: orphans, leftovers, singles, ungrouped (used as a field name, not as the term)
 
+**Unreadable frame**:
+A file that was named as a frame but could not be opened — no decoder in the browser for it, or a
+RAW with no usable preview inside. Named with its reason and stepped over, the way loose shots are,
+rather than dropped on the floor: a caller who counted the files they handed over is otherwise left
+waiting for one that is never coming.
+_Avoid_: failed, skipped, bad file, rejected
+
 **Capture time**:
 When the shutter fired, read from the frame itself. The only thing that separates one burst from the
 next, and the reason a set with no such time recorded is grouped on a guess.

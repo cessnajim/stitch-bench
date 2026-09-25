@@ -406,7 +406,7 @@ const nf = n => Math.round(n).toLocaleString('en-US');
 let uid = 0;
 
 const S = {
-  items: [], mode: 'pano', sel: null, hover: null, sample: false, zoom: null, painted: 0,
+  items: [], unreadable: [], loading: false, mode: 'pano', sel: null, hover: null, sample: false, zoom: null, painted: 0,
   pano: null, panoErr: null, panoBusy: false, view: null,
   opt: { gap: 0, bg: '#ffffff', transparent: false, match: 'min', align: 'center', cols: 3, cellFit: 'none',
          model: 'perspective', features: 2500, blend: 'feather', edges: 'trim', paint: 8, onion: true,
@@ -596,10 +596,24 @@ async function decodeRawPreview(file) {
   return null;
 }
 
+// Every file named here leaves by one of two doors: it becomes an item, or it lands in
+// S.unreadable with the reason. Nothing may leave by neither. Anyone driving this page counts the
+// files they handed over and waits for them, so a file that quietly disappears is a wait that
+// never ends — and on the way to that timeout, no word about which file it was.
 async function addFiles(fileList) {
-  const files = [...fileList].filter(f => f.type.startsWith('image/') || RAW_RE.test(f.name) || /\.(jpe?g|png|webp|gif|bmp|avif|heic|tiff?)$/i.test(f.name));
-  if (!files.length) { setStatus('No images in that selection.', 'error'); return; }
+  S.loading = true;                     // cleared at the end, so a driver waits for the last step
+  const all = [...fileList];
+  const looksLikeImage = f => f.type.startsWith('image/') || RAW_RE.test(f.name) || /\.(jpe?g|png|webp|gif|bmp|avif|heic|tiff?)$/i.test(f.name);
+  const files = all.filter(looksLikeImage);
   if (S.sample) { clearItems(); S.sample = false; }
+  // index is the file's position in what was handed over, so a driver can name the path it sent.
+  S.unreadable = all.filter(f => !looksLikeImage(f)).map(f => ({ name: f.name, reason: 'not a picture file', index: all.indexOf(f) }));
+  if (!files.length) {
+    setStatus('No images in that selection.', 'error');
+    S.loading = false;
+    itemsChanged();
+    return;
+  }
   const failed = [], noPreview = [];
   let raws = 0;
   for (let i = 0; i < files.length; i++) {
@@ -608,10 +622,18 @@ async function addFiles(fileList) {
     try {
       if (RAW_RE.test(f.name)) {
         const bmp = await decodeRawPreview(f);
-        if (!bmp) { noPreview.push(f.name); continue; }
+        if (!bmp) {
+          noPreview.push(f.name);
+          S.unreadable.push({ name: f.name, reason: 'no usable preview embedded in the RAW file', index: all.indexOf(f) });
+          continue;
+        }
         const it = makeItem(f.name, bmp.bitmap, bmp.blob); it.raw = true; S.items.push(it); raws++;
       } else S.items.push(makeItem(f.name, await createImageBitmap(f), f));
-    } catch (e) { console.error(f.name, e); failed.push(f.name); }
+    } catch (e) {
+      console.error(f.name, e);
+      failed.push(f.name);
+      S.unreadable.push({ name: f.name, reason: 'this browser has no decoder for it', index: all.indexOf(f) });
+    }
   }
   placeFreeDefaults();
   const msgs = [];
@@ -619,12 +641,13 @@ async function addFiles(fileList) {
   if (noPreview.length) msgs.push(`${noPreview.join(', ')}: no usable embedded preview in the RAW file. Export it to JPEG or 16-bit TIFF from your RAW editor first.`);
   if (msgs.length) setStatus(msgs.join(' '), 'error');
   else setStatus(raws ? `Loaded ${raws} RAW file${raws > 1 ? 's' : ''} from the camera’s built-in JPEG preview.` : '');
+  S.loading = false;
   itemsChanged();
 }
 
 function clearItems() {
   for (const it of S.items) { it.feat?.des.delete(); releaseFull(it); it.full?.close?.(); }
-  S.items = []; S.sel = null;
+  S.items = []; S.unreadable = []; S.sel = null;
 }
 
 function itemsChanged() {

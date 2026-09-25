@@ -16,6 +16,11 @@ It does five things:
 
 Exports PNG / JPEG / WebP at up to 180 MP. RAW files (NEF, CR2, ARW, DNG, RAF…) load via the
 camera-rendered JPEG preview embedded in the file, since browsers can't demosaic raw sensor data.
+Decoding is whatever the browser can do, so TIFF and HEIC are accepted but usually fail; anything
+that won't open is named with its reason and stepped over rather than stopping the job. A folder
+shot RAW+JPEG counts as one frame per shutter press — the JPEG is kept, being the better of the two
+renderings the camera made. Only a JPEG, PNG or WebP displaces a RAW this way: a HEIC or TIFF beside
+it usually won't open, so the RAW is kept and read through its preview.
 
 ## Exposure correction
 

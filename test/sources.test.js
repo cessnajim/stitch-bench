@@ -35,7 +35,7 @@ const stamp = (d, mins, secs) =>
 
 module.exports = async function run() {
   let pass = true;
-  const { expandSources, captureTime, timedEntries, groupBursts } = await import(SRC);
+  const { expandSources, captureTime, timedEntries, groupBursts, describeBurst, isOurOutput } = await import(SRC);
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'stitch-sources-'));
   const seed = path.resolve(__dirname, 'fixtures', 'frame-left.jpg');
@@ -107,6 +107,60 @@ module.exports = async function run() {
     const wide = groupBursts(await timedEntries(flat.files), { gapSeconds: 3600, minFrames: 3 });
     pass = ok('a wider gap merges the sweeps', wide.bursts.length === 1 && wide.bursts[0].length === 7,
       `${wide.bursts.length} burst of ${wide.bursts[0].length}`) && pass;
+
+    // RAW+JPEG: one press of the shutter, two files. Counting both doubles the burst and makes the
+    // stitcher align a frame against its own copy.
+    const pair = fs.mkdtempSync(path.join(os.tmpdir(), 'stitch-pair-'));
+    for (const n of ['DSC_1.', 'DSC_2.', 'DSC_3.']) {
+      fs.writeFileSync(path.join(pair, n + 'JPG'), jpeg);
+      fs.writeFileSync(path.join(pair, n + 'NEF'), jpeg);
+    }
+    fs.writeFileSync(path.join(pair, 'DSC_4.NEF'), jpeg);          // RAW with no JPEG beside it
+    const paired = await expandSources([pair]);
+    pass = ok('a RAW beside its own JPEG is set aside',
+      paired.files.length === 4 && paired.pairedRaw.length === 3,
+      `${paired.files.length} kept, ${paired.pairedRaw.length} paired off`) && pass;
+    pass = ok('the JPEG is the one kept',
+      paired.files.filter(f => f.endsWith('.JPG')).length === 3,
+      paired.files.map(f => path.basename(f)).join(',')) && pass;
+    pass = ok('a RAW shot on its own is still stitched',
+      paired.files.some(f => f.endsWith('DSC_4.NEF')), '') && pass;
+    // Naming files is the caller saying which frames they want.
+    const named = await expandSources([path.join(pair, 'DSC_1.JPG'), path.join(pair, 'DSC_1.NEF')]);
+    pass = ok('an explicitly named pair is left alone',
+      named.files.length === 2 && named.pairedRaw.length === 0,
+      `${named.files.length} kept`) && pass;
+    fs.rmSync(pair, { recursive: true, force: true });
+
+    // Only a sibling every browser opens may displace the RAW. Preferring an iPhone's HEIC over its
+    // DNG, or an exported TIFF over its NEF, trades a frame that works for one that will not.
+    const undecodable = fs.mkdtempSync(path.join(os.tmpdir(), 'stitch-heic-'));
+    for (const [a, b] of [['IMG_1.HEIC', 'IMG_1.DNG'], ['DSC_9.tif', 'DSC_9.NEF']]) {
+      fs.writeFileSync(path.join(undecodable, a), jpeg);
+      fs.writeFileSync(path.join(undecodable, b), jpeg);
+    }
+    const kept = await expandSources([undecodable]);
+    pass = ok('a RAW is kept when its sibling is a HEIC or a TIFF',
+      kept.pairedRaw.length === 0 && kept.files.some(f => f.endsWith('IMG_1.DNG')) && kept.files.some(f => f.endsWith('DSC_9.NEF')),
+      kept.files.map(f => path.basename(f)).join(',')) && pass;
+    fs.rmSync(undecodable, { recursive: true, force: true });
+
+    // The write guard exempts only what this tool writes. A prefix is not provenance: a library of
+    // panoramas is full of photographs called panorama-something.
+    const exempt = ['/p/panorama-20260923225512.jpg', '/p/grid-2026092322551.png', '/p/burst-03/panorama.webp'];
+    const guarded = ['/p/panorama-of-grand-canyon.jpg', '/p/row-boats.jpg', '/p/Panorama.JPG', '/p/panorama.jpg', '/p/grid.png'];
+    pass = ok('only files this tool writes are exempt from the write guard',
+      exempt.every(isOurOutput) && !guarded.some(isOurOutput),
+      [...exempt, ...guarded].filter((p, i) => isOurOutput(p) !== (i < exempt.length)).join(', ') || 'all as expected') && pass;
+
+    // Saying "mtime" for a burst that mostly carried real shutter times overstates the guess.
+    const halfGuessed = describeBurst([
+      { path: 'a.jpg', at: new Date('2026-04-11T09:00:00'), source: 'exif' },
+      { path: 'b.jpg', at: new Date('2026-04-11T09:00:04'), source: 'exif' },
+      { path: 'c.jpg', at: new Date('2026-04-11T09:00:08'), source: 'mtime' },
+    ], 1);
+    pass = ok('a burst of mixed times says so', halfGuessed.time_source === 'mixed',
+      halfGuessed.time_source) && pass;
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

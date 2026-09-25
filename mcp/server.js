@@ -8,13 +8,13 @@ import { z } from 'zod';
 import { resolve, dirname, join, basename, extname } from 'node:path';
 import { promises as fsp } from 'node:fs';
 import { stitchPanorama, stitchLayout, inspectAlignment, shutdown } from './stitcher.js';
-import { expandSources, timedEntries, groupBursts, describeBurst } from './sources.js';
+import { expandSources, timedEntries, groupBursts, describeBurst, isOurOutput } from './sources.js';
 
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 const imagesField = z.array(z.string().min(1))
   .min(1)
-  .describe('Paths to the source images, in any order, or to directories holding them. A directory expands to the images inside it, skipping anything this server wrote earlier. JPEG, PNG, WebP or camera RAW (NEF, CR2, ARW, DNG…), which is read through the preview the camera embedded in the file.');
+  .describe('Paths to the source images, in any order, or to directories holding them. A directory expands to the images inside it, skipping anything this server wrote earlier. JPEG, PNG, WebP or camera RAW (NEF, CR2, ARW, DNG…), which is read through the preview the camera embedded in the file. Decoding is the browser\'s: TIFF and HEIC are accepted but most browsers cannot open them, and anything that fails is named in "unreadable" rather than stopping the job.');
 const recursiveField = z.boolean().default(false)
   .describe('When a directory is named, also look in the directories inside it.');
 const gapField = z.number().min(0.5).max(3600).default(10)
@@ -27,12 +27,28 @@ const qualityField = z.number().min(0.5).max(1).default(0.92)
   .describe('Encoder quality for JPEG and WebP. Ignored for PNG.');
 const scaleField = z.number().min(0.05).max(1).default(1)
   .describe('Fraction of full resolution to write. 1 renders from the full-size originals.');
+const overwriteField = z.boolean().default(false)
+  .describe('Allow writing over a file that is already there and was not written by this tool. Off by default: an output path is easy for a caller to get wrong, and the wrong one points at somebody\'s photograph.');
 const previewField = z.boolean().default(true)
   .describe('Also return a small JPEG of the result, so the caller can see what was produced.');
 
+// Checked before the stitch rather than after it: the work takes minutes, and a caller who learns
+// at the end that the path was refused has paid for the whole thing twice. Replacing a result this
+// tool wrote is ordinary — that is what re-running a folder does — so only other files are refused.
+async function guardOutput(output, overwrite) {
+  if (overwrite) return;
+  try { await fsp.stat(output); } catch { return; }
+  if (isOurOutput(output)) return;
+  throw new Error(
+    `${output} already exists and was not written by this tool. Pass overwrite: true to replace it, ` +
+    `or name a different path.`);
+}
+
 function defaultOutput(images, format, suffix) {
   const first = resolve(images[0]);
-  const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 13);
+  // Through seconds: cutting this short lands two stitches a few seconds apart on one name, and
+  // the second silently replaces the first.
+  const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
   return join(dirname(first), `${suffix}-${stamp}.${EXT[format]}`);
 }
 
@@ -40,14 +56,14 @@ function defaultOutput(images, format, suffix) {
 // these"; naming a directory means "work out what is in here", which is the case that needs
 // grouping, because a folder of a day's shooting holds several sweeps and some loose shots.
 async function resolveSets(args) {
-  const { files, sawDirectory } = await expandSources(args.images, { recursive: args.recursive });
+  const { files, sawDirectory, pairedRaw } = await expandSources(args.images, { recursive: args.recursive });
   if (!files.length) {
     throw new Error('No images found. A directory expands to the picture files inside it; pass recursive: true to look in subdirectories as well.');
   }
   const group = !args.group || args.group === 'auto' ? (sawDirectory ? 'bursts' : 'single') : args.group;
   if (group === 'single') {
     if (files.length < 2) throw new Error(`Stitching needs at least two overlapping images; found ${files.length}.`);
-    return { sets: [{ files, run: null, index: 1 }], grouped: false, ungrouped: [], timeSource: null };
+    return { sets: [{ files, run: null, index: 1 }], grouped: false, ungrouped: [], timeSource: null, pairedRaw };
   }
   const { bursts, ungrouped, timeSource } = groupBursts(await timedEntries(files), {
     gapSeconds: args.gap_seconds, minFrames: args.min_frames,
@@ -60,7 +76,7 @@ async function resolveSets(args) {
   }
   return {
     sets: bursts.map((run, i) => ({ files: run.map(e => e.path), run, index: i + 1 })),
-    grouped: true, ungrouped: ungrouped.map(e => e.path), timeSource,
+    grouped: true, ungrouped: ungrouped.map(e => e.path), timeSource, pairedRaw,
   };
 }
 
@@ -120,12 +136,18 @@ const fail = err => ({
   isError: true,
 });
 
+const pairedField = z.array(z.string())
+  .describe('RAW files set aside because the same shutter press also wrote a JPEG, PNG or WebP beside them, which is the better of the two renderings to use. Only applies to files found by expanding a directory.');
+const unreadableField = z.array(z.object({ name: z.string(), reason: z.string(), path: z.string().nullable() }))
+  .describe('Files that were named but could not be opened, each with why. The job went ahead without them.');
+
 const panoramaResult = z.object({
   output_path: z.string(),
   directory: z.string().nullable(),
   width: z.number(), height: z.number(), megapixels: z.number(),
   bytes: z.number(), painted_percent: z.number(), seconds: z.number(),
   frames_total: z.number(), frames_placed: z.number(), frames_unplaced: z.array(z.string()),
+  unreadable: unreadableField,
   anchor: z.string().nullable(),
   links: z.array(z.object({ a: z.string(), b: z.string(), matches: z.number(), agreeing: z.number() })),
   full_extent: z.object({ width: z.number(), height: z.number() }),
@@ -165,26 +187,28 @@ server.registerTool('stitch_panorama', {
       .describe('"full" matches brightness, removes lens shading and smooths gradients; "gain" matches brightness only; "off" leaves pixel values untouched, which is what you want for measurement work.'),
     edges: z.enum(['trim', 'crop', 'fill', 'keep']).default('trim')
       .describe('Ragged edges: "trim" keeps the largest rectangle within the painted-in limit, "crop" keeps only photographed pixels, "fill" keeps everything and paints the gaps, "keep" leaves them transparent.'),
-    paint_limit: z.number().min(0).max(30).default(8)
-      .describe('With edges "trim", the largest share of the frame (percent) allowed to be painted in rather than photographed.'),
+    paint_limit: z.number().min(0).max(30).default(2)
+      .describe('With edges "trim", the largest share of the frame (percent) allowed to be painted in rather than photographed. Past a couple of percent the painted corners stop passing for photography, so raise it deliberately rather than by default.'),
     seams: z.enum(['feather', 'hard']).default('feather')
       .describe('Blend overlaps smoothly, or butt them with hard edges.'),
     detail: z.union([z.literal(1200), z.literal(2500), z.literal(5000)]).default(2500)
       .describe('How many feature points to look for per image. More is slower and finds harder matches.'),
-    format: formatField, quality: qualityField, scale: scaleField, preview: previewField,
+    format: formatField, quality: qualityField, scale: scaleField,
+    overwrite: overwriteField, preview: previewField,
   },
   outputSchema: {
     count: z.number(),
     grouped_by_burst: z.boolean(),
     time_source: z.string().nullable(),
     ungrouped_files: z.array(z.string()),
+    raw_paired_with_jpeg: pairedField,
     panoramas: z.array(panoramaResult),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
 }, async (args, extra) => {
   try {
     const onProgress = progressFor(extra);
-    const { sets, grouped, ungrouped, timeSource } = await resolveSets(args);
+    const { sets, grouped, ungrouped, timeSource, pairedRaw } = await resolveSets(args);
     const collect = args.collect === 'auto' ? (grouped ? 'copy' : 'none') : args.collect;
     if (sets.length > 1 && args.output) {
       throw new Error(`This is ${sets.length} bursts, so "output" cannot name one file. Leave it out, or set output_dir to the folder to write them under.`);
@@ -197,11 +221,19 @@ server.registerTool('stitch_panorama', {
         output = resolve(args.output || defaultOutput(set.files, args.format, 'panorama'));
       } else {
         directory = join(base, `burst-${String(set.index).padStart(2, '0')}`);
-        sources = await collectInto(directory, set.files, collect);
         output = join(directory, `panorama.${EXT[args.format]}`);
       }
+      await guardOutput(output, args.overwrite);
       if (sets.length > 1) onProgress?.(null, `Burst ${set.index} of ${sets.length}: ${set.files.length} frames…`);
-      const { result, preview } = await stitchPanorama({ ...args, images: sources, output, onProgress });
+      const { result, preview } = await stitchPanorama({ ...args, images: set.files, output, onProgress });
+      // Collected after the stitch, not before it: until the page has tried a file nobody knows
+      // whether it opens, and a folder presented as the frames that made a panorama should not
+      // hold one that could not be read. A stitch that fails outright now leaves no half-made
+      // folder behind either.
+      if (directory) {
+        const unread = new Set(result.unreadable.map(u => u.path));
+        sources = await collectInto(directory, set.files.filter(f => !unread.has(f)), collect);
+      }
       panoramas.push({
         ...result, directory, source_files: sources,
         burst: set.run ? describeBurst(set.run, set.index) : null,
@@ -211,7 +243,7 @@ server.registerTool('stitch_panorama', {
     return reply({
       result: {
         count: panoramas.length, grouped_by_burst: grouped,
-        time_source: timeSource, ungrouped_files: ungrouped, panoramas,
+        time_source: timeSource, ungrouped_files: ungrouped, raw_paired_with_jpeg: pairedRaw, panoramas,
       },
       previews,
     });
@@ -233,6 +265,7 @@ server.registerTool('find_bursts', {
   },
   outputSchema: {
     files_found: z.number(),
+    raw_paired_with_jpeg: pairedField,
     time_source: z.string()
       .describe('"exif" when every file carried a shutter time, "mtime" when none did and the file dates were used instead, "mixed" for some of each.'),
     bursts: z.array(z.object({
@@ -244,7 +277,7 @@ server.registerTool('find_bursts', {
   annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
 }, async (args) => {
   try {
-    const { files } = await expandSources(args.images, { recursive: args.recursive });
+    const { files, pairedRaw } = await expandSources(args.images, { recursive: args.recursive });
     if (!files.length) throw new Error('No images found. Pass recursive: true to look in subdirectories as well.');
     const { bursts, ungrouped, timeSource } = groupBursts(await timedEntries(files), {
       gapSeconds: args.gap_seconds, minFrames: args.min_frames,
@@ -252,6 +285,7 @@ server.registerTool('find_bursts', {
     return reply({
       result: {
         files_found: files.length,
+        raw_paired_with_jpeg: pairedRaw,
         time_source: timeSource,
         bursts: bursts.map((run, i) => describeBurst(run, i + 1)),
         ungrouped: ungrouped.map(e => e.path),
@@ -278,6 +312,8 @@ server.registerTool('inspect_alignment', {
   },
   outputSchema: {
     frames_total: z.number(), frames_placed: z.number(), frames_unplaced: z.array(z.string()),
+    unreadable: unreadableField,
+    raw_paired_with_jpeg: pairedField,
     anchor: z.string().nullable(),
     links: z.array(z.object({ a: z.string(), b: z.string(), matches: z.number(), agreeing: z.number() })),
     full_extent: z.object({ width: z.number(), height: z.number() }),
@@ -285,9 +321,10 @@ server.registerTool('inspect_alignment', {
   annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
 }, async (args, extra) => {
   try {
-    const { files } = await expandSources(args.images, { recursive: args.recursive });
+    const { files, pairedRaw } = await expandSources(args.images, { recursive: args.recursive });
     if (files.length < 2) throw new Error(`Checking an alignment needs at least two images; found ${files.length}.`);
-    return reply(await inspectAlignment({ ...args, images: files, onProgress: progressFor(extra) }));
+    const out = await inspectAlignment({ ...args, images: files, onProgress: progressFor(extra) });
+    return reply({ ...out, result: { ...out.result, raw_paired_with_jpeg: pairedRaw } });
   } catch (e) { return fail(e); }
 });
 
@@ -310,19 +347,23 @@ server.registerTool('stitch_layout', {
     gap: z.number().int().min(0).max(200).default(0).describe('Pixels of space between images.'),
     background: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#ffffff').describe('Background colour behind gaps, as #rrggbb.'),
     transparent: z.boolean().default(false).describe('Leave the background transparent instead. PNG or WebP only.'),
-    format: formatField, quality: qualityField, scale: scaleField, preview: previewField,
+    format: formatField, quality: qualityField, scale: scaleField,
+    overwrite: overwriteField, preview: previewField,
   },
   outputSchema: {
     output_path: z.string(), width: z.number(), height: z.number(), megapixels: z.number(),
-    bytes: z.number(), images: z.number(), seconds: z.number(),
+    bytes: z.number(), images: z.number(), unreadable: unreadableField,
+    raw_paired_with_jpeg: pairedField, seconds: z.number(),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
 }, async (args, extra) => {
   try {
-    const { files } = await expandSources(args.images, { recursive: args.recursive });
+    const { files, pairedRaw } = await expandSources(args.images, { recursive: args.recursive });
     if (!files.length) throw new Error('No images found.');
     const output = resolve(args.output || defaultOutput(files, args.format, args.mode));
-    return reply(await stitchLayout({ ...args, images: files, output, onProgress: progressFor(extra) }));
+    await guardOutput(output, args.overwrite);
+    const out = await stitchLayout({ ...args, images: files, output, onProgress: progressFor(extra) });
+    return reply({ ...out, result: { ...out.result, raw_paired_with_jpeg: pairedRaw } });
   } catch (e) { return fail(e); }
 });
 

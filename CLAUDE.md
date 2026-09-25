@@ -40,8 +40,13 @@ stays a glossary; implementation detail belongs in the code or an ADR.
 The shading stage says whether it removed shading, found none, or found a fit and refused it. The
 edge panel states what share of the frame is invented rather than quietly presenting painted pixels
 as photography. `find_bursts` reports whether the times it grouped on came from Exif or from file
-dates, because grouping on file dates is a guess. Give anything new that can decline or approximate
+dates, because grouping on file dates is a guess, and every tool that expands a folder names the
+RAW files it set aside because a JPEG of the same shutter press was sitting beside them. Give anything new that can decline or approximate
 the same treatment: a caller cannot act on silence.
+
+Silence is also a way to hang. Every file handed to `addFiles` leaves as an item or as an entry in
+`S.unreadable`, and `mcp/stitcher.js` waits on the sum. A file that leaves by neither door is one the
+driver waits ten minutes for and then cannot name.
 
 ## Tests
 
