@@ -34,13 +34,19 @@ module.exports = async function run() {
       };
       const EV = [1, 1.35, 0.72];                       // roughly ±half a stop between frames
       const exposure = (x, n, w, h) => { if (n) perPixel(x.canvas, lin => lin * EV[n]); };
+      // Three stops end to end, which is what aperture priority with auto ISO does over one sweep
+      // from open water into trees. Darkening only: brightening past 1 would clip the scene's own
+      // highlights in the input, and a frame cannot be corrected back out of a clip by anything.
+      // Centred, the solve has to reach gain 0.35 at one end and 2.83 at the other.
+      const EV_WIDE = [1, 0.354, 0.125];
+      const exposureWide = (x, n, w, h) => { if (n) perPixel(x.canvas, lin => lin * EV_WIDE[n]); };
       const vignette = (x, n, w, h) => {
         perPixel(x.canvas, (lin, px, py) => {
           const r2 = (px * px + py * py) / 2;            // 0 at centre, 1 at the corners
           return lin * EV[n] * (1 - 0.45 * r2);          // 45% of the light lost in the corners
         });
       };
-      const run = async damage => {
+      const run = async (damage, ev) => {
         const items = [];
         for (const [n, x0] of [[0, 0], [1, 700], [2, 1400]]) {
           const c = mkCanvas(1000, 700), x = c.getContext('2d');
@@ -82,13 +88,36 @@ module.exports = async function run() {
             drift: +(drift * 100).toFixed(1),
           };
         }
+        // What the solve itself recovered, scored against the ratios the frames were damaged by.
+        // The reconstruction figures above are a system measure: they also carry the global
+        // rescale, which deliberately re-anchors the set to its own overall brightness and moves
+        // the whole panorama by a constant the block statistics cannot divide out. Comparing the
+        // gains against the damage is the one number that isolates this stage.
+        if (ev) {
+          const P = S.pano.photo, placed = S.items.filter(it => S.pano.placed.has(it.id));
+          // Compare the shape of the correction, not its level. Where the set as a whole sits is
+          // chosen after the solve, on its own grounds, and dividing both sides by their geometric
+          // mean leaves exactly what the solve was asked for: the ratios between the frames.
+          const centre = a => {
+            const m = Math.exp(a.reduce((s, v) => s + Math.log(v), 0) / a.length);
+            return a.map(v => v / m);
+          };
+          const want = centre(ev.map(e => 1 / e));
+          const have = centre(placed.map(it => P.corr.get(it.id).g.reduce((s, v) => s + v, 0) / 3));
+          out.gainErr = +Math.max(...have.map((v, i) => Math.abs(v / want[i] - 1))).toFixed(4);
+        }
         return out;
       };
-      return { exposureOnly: await run(exposure), exposurePlusVignette: await run(vignette) };
+      return {
+        exposureOnly: await run(exposure, EV),
+        exposurePlusVignette: await run(vignette),
+        wideRamp: await run(exposureWide, EV_WIDE),
+      };
     });
 
-    const e = r.exposureOnly, v = r.exposurePlusVignette;
-    pass = ok('all frames placed', e.placed === 3 && v.placed === 3, `${e.placed}/3, ${v.placed}/3`) && pass;
+    const e = r.exposureOnly, v = r.exposurePlusVignette, w = r.wideRamp;
+    pass = ok('all frames placed', e.placed === 3 && v.placed === 3 && w.placed === 3,
+      `${e.placed}/3, ${v.placed}/3, ${w.placed}/3`) && pass;
     pass = ok('exposure differences corrected', e.full.rms < 3.5,
       `rms ${e.off.rms} -> ${e.full.rms}`) && pass;
     // 45% of the light lost in the corners is heavier than most real lenses; the correction is
@@ -105,6 +134,21 @@ module.exports = async function run() {
       `exposure-only ${e.full.drift}%`) && pass;
     pass = ok('vignette case stays near the centre exposure', Math.abs(v.full.drift) < 9,
       `${v.full.drift}% (centre falloff preserved by design)`) && pass;
+    // Recovering the damage is the check with teeth, and it is the narrow one: the half-stop set
+    // already passes everything else here, so only a measurement against the known ratios says
+    // whether the solve tracks a spread or merely survives one.
+    pass = ok('half-stop exposure recovered', e.gainErr < 0.05,
+      `worst gain off by ${(e.gainErr * 100).toFixed(1)}%`) && pass;
+    // Three stops end to end: the ends need gain 0.35 and 2.83. Pinning each frame at zero biased
+    // the solve inward and the old rails at 0.45 and 2.2 then truncated what survived, so both
+    // ends sat on a clamp and the worst gain came back 27% wrong. The half-stop case above cannot
+    // see any of that, because 1.35 and 0.72 fit inside the rails with room to spare. (This set also
+    // comes back darker than the scene it was cut from, with or without the fix: the rescale
+    // anchors to the damaged set's own brightness. That is why drift is not asserted here.)
+    pass = ok('three-stop sweep recovered', w.gainErr < 0.05,
+      `worst gain off by ${(w.gainErr * 100).toFixed(1)}%`) && pass;
+    pass = ok('three-stop sweep beats doing nothing', w.full.rms < w.off.rms * 0.35,
+      `rms ${w.off.rms} -> ${w.full.rms}`) && pass;
     pass = ok('no page errors', errors.length === 0, errors[0] || '') && pass;
   } finally { await browser.close(); }
   return pass;

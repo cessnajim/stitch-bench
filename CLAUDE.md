@@ -13,9 +13,12 @@ reading capture times and grouping frames into bursts live in `mcp/sources.js`.
 
 Read [`docs/adr/`](docs/adr). The exposure and shading stages carry constraints that look like
 arbitrary choices and are not. Exposure is solved as log gains because matching `gain × mean + offset`
-is degenerate and collapses every gain to its clamp. The shading basis penalises its asymmetric terms
-because frames shot in one row constrain nothing vertically, and fitted freely the vertical term came
-back with the wrong sign. The shading fit passes three gates before it is trusted, and loosening any
+is degenerate and collapses every gain to its clamp. Its gauge is one sum-to-zero row, not a prior
+per frame: the extra rows are not gauge fixing but a claim that every frame was exposed alike, and
+they bias a wide sweep inward until its ends sit on the clamps. The level is set separately,
+afterwards ([ADR-0005](docs/adr/0005-one-gauge-row-and-a-level.md)). The shading basis penalises its
+asymmetric terms because frames shot in one row constrain nothing vertically, and fitted freely the
+vertical term came back with the wrong sign. The shading fit passes three gates before it is trusted, and loosening any
 of them is invisible to the synthetic tests, because synthetic damage is real shading by construction.
 
 **Measure against synthetic ground truth.** `test/synthetic.test.js` builds a scene, damages it in

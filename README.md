@@ -32,7 +32,12 @@ mid-tones up and still leave the sky stepped.
    offset` between frames is satisfied just as well by shrinking every gain toward zero, and with
    enough overlapping pairs outvoting the priors, that is exactly what a solver does — every frame
    pinned at the minimum gain and the panorama washed out. In log space only differences between
-   frames appear, and the one remaining degree of freedom is pinned by a prior.
+   frames appear, and the one remaining degree of freedom — the same constant on every gain — is
+   pinned by a single sum-to-zero row. One row, because it is one degree of freedom: a prior per
+   frame also pins it, but the surplus rows quietly assert that the frames were all exposed alike,
+   and an auto-exposure sweep across three stops gets dragged inward until its ends sit on their
+   clamps. Where the set as a whole then sits is chosen separately, afterwards, as the single
+   factor that leaves its mean brightness where it was.
 2. **Shading.** One field shared by the set — same lens, same filter — plus a per-frame exposure
    term. Its basis is ordered radial-first, and the asymmetric terms are heavily penalised, because
    frames shot in a single row only overlap side by side: the same scene point appears at different

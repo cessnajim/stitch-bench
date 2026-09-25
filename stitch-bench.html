@@ -1279,21 +1279,72 @@ function buildPhotometric(cv, mode) {
         addRow(ATA, ATy, N, [[i, 1], [j, -1]], Math.log(mj) - Math.log(mi), w);
         pairs++;
       }
-      for (let i = 0; i < N; i++) addRow(ATA, ATy, N, [[i, 1]], 0, pairs ? 1 / 0.25 : 1e3);
+      // The pair rows constrain only differences, leaving exactly one free degree of freedom: the
+      // same constant added to every log gain satisfies all of them. That is one constraint's worth
+      // of slack, so it takes one constraint to pin. Pinning each frame at zero instead spends N
+      // rows on it, and the surplus N-1 pull the frames toward one another — a prior saying every
+      // frame was exposed alike. On a set that was, the bias is invisible; on an auto-exposure
+      // sweep running from bright water into dark trees it fights the measurement, and the frames
+      // at the ends of the sweep reach their clamps and stay there. Sum-to-zero pins the gauge and
+      // says nothing about the spread. The faint ridge beneath it only keeps the system solvable
+      // when the overlap graph is disconnected and no chain of pairs relates one group to another.
+      if (pairs) {
+        addRow(ATA, ATy, N, Array.from({ length: N }, (_, i) => [i, 1]), 0, 1e3);
+        for (let i = 0; i < N; i++) addRow(ATA, ATy, N, [[i, 1]], 0, 0.05);
+      } else {
+        for (let i = 0; i < N; i++) addRow(ATA, ATy, N, [[i, 1]], 0, 1e3);
+      }
       const x = solveLinear(ATA, ATy, N);
       for (let i = 0; i < N; i++) {
         const g = x ? Math.exp(x[i]) : 1;
-        gains[c][i] = Number.isFinite(g) ? Math.min(2.2, Math.max(0.45, g)) : 1;
+        // Rails for a solve that has run away, not a claim about what cameras do — so they sit
+        // outside the range cameras reach. Aperture priority with auto ISO moves several stops
+        // across a single sweep, and the row above centres the gains, so half the spread each way
+        // is what has to fit: these hold a six-stop set without touching it.
+        gains[c][i] = Number.isFinite(g) ? Math.min(8, Math.max(0.125, g)) : 1;
         offs[c][i] = 0;
       }
     }
+    // Setting the level, which is the other half of fixing the gauge. Sum-to-zero leaves the log
+    // gains either side of zero, so their geometric mean is one — but light averages
+    // arithmetically, and a frame lifted 2.8x brings in far more of it than one held back to 0.35
+    // takes out. Centre a wide sweep that way and the panorama comes out brighter overall, on a
+    // real set by enough to blow the sky. Pick the factor that leaves the set's own mean where it
+    // was instead: it is common to every frame, which is exactly the freedom the pair rows never
+    // constrained, so it moves the level without disturbing how the frames agree. The rails above
+    // are not reapplied — they bound the solve, and the level is the part of the answer the solve
+    // was never entitled to decide.
+    //
+    // Both sides are read the way the blend will read them: one value per output pixel, frames
+    // averaged by the weights that will composite them. Summing per frame instead counts an
+    // overlap once for every frame covering it, weighting the seams above the rest of the picture.
+    //
+    // Linear light. Matching the encoded mean was tried, on the grounds that encoding is concave
+    // and closing the spread therefore lifts the average of the encoded pixels even when the light
+    // is unchanged — true, as far as it goes. On the one real set it was tried against, that
+    // version left the panorama 22% darker overall where this one holds it within 5%, for reasons
+    // not yet traced through the two stages below. It was never scored on synthetic ground truth.
+    // docs/adr/0005 has the numbers and the limits of what they show.
+    let before = 0, after = 0;
+    for (let q = 0; q < W * H; q++) {
+      let ws = 0, b = 0, a = 0;
+      for (let i = 0; i < N; i++) {
+        const w = L[i].wt[q]; if (!w) continue;
+        ws += w;
+        for (let c = 0; c < 3; c++) { const v = L[i].rgb[q * 3 + c]; b += w * v; a += w * v * gains[c][i]; }
+      }
+      if (ws) { before += b / ws; after += a / ws; }
+    }
+    level = after > 1e-9 && before > 1e-9 ? before / after : 1;
+    if (!Number.isFinite(level) || level <= 0) level = 1;
+    for (let c = 0; c < 3; c++) for (let i = 0; i < N; i++) gains[c][i] *= level;
     for (let i = 0; i < N; i++) for (let q = 0; q < W * H; q++) {
       if (!L[i].wt[q]) continue;
       for (let c = 0; c < 3; c++) L[i].rgb[q * 3 + c] *= gains[c][i];
     }
   };
 
-  let vig = null;
+  let vig = null, level = 1;
   // Stage order is measurable, not obvious: matching brightness first keeps the lens fit clean on
   // synthetic input, but on real frames the falloff must come out before the gains are fitted, or
   // the gain solve partly absorbs the vignette and the sky is left uneven.
@@ -1384,7 +1435,7 @@ function buildPhotometric(cv, mode) {
     }
     falloff = n ? sum / n * 100 : 0;
   }
-  return { corr, W, H, kl, summary, mode, falloff, alpha, beta, shadeVerdict };
+  return { corr, W, H, kl, summary, mode, falloff, alpha, beta, shadeVerdict, level };
 }
 
 function panoSize() { const b = S.pano.bbox; return { W: b.x1 - b.x0, H: b.y1 - b.y0 }; }

@@ -185,6 +185,10 @@ const photometry = pg => pg.evaluate(() => {
     per_frame_change_percent: ph.summary.map(x => ({ name: x.name, percent: +x.pct.toFixed(1) })),
     shading: ph.shadeVerdict || 'not assessed',
     corner_falloff_percent: +(ph.falloff || 0).toFixed(1),
+    // How far the set as a whole was moved, in stops, after the frames were matched to each other.
+    // It is common to every frame, so it is part of each per-frame figure above; reported on its
+    // own because on a wide sweep it is the number that explains why they all moved together.
+    level_stops: +Math.log2(ph.level || 1).toFixed(2),
   };
 });
 
